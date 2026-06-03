@@ -21,6 +21,7 @@ class Page:
             self.free_space_pointer = self.PAGE_SIZE
             self.free_space = self.PAGE_SIZE - self.HEADER_SIZE
             struct.pack_into('H', self.page, 2, self.free_space_pointer)
+            struct.pack_into('H', self.page, 4, self.free_space)
 
         else:
             self.page = data
@@ -45,9 +46,16 @@ class Page:
         struct.pack_into('H', self.page, slot_arr_offset + 2, length)
         struct.pack_into('H', self.page, slot_arr_offset + 4, 1)
 
+
+        print('####### FREE SPACE BEFORE SUBTRACTING: ', self.free_space)
         self.free_space_pointer -= length
-        self.free_space -= length
+        self.free_space -= (length + self.SLOT_SIZE)
         self.num_slots += 1
+        struct.pack_into('H', self.page, 0, self.num_slots)
+        struct.pack_into('H', self.page, 2, self.free_space_pointer)
+        print('####### FREE SPACE AFTER SUBTRACTING: ', self.free_space)
+        struct.pack_into('H', self.page, 4, self.free_space)
+
 
 
     def get_tuple(self, slot_id:int) -> bytes | None:
