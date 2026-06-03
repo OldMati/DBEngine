@@ -1,5 +1,5 @@
-from dbms.storage.disk_manager import DiskManager
-from dbms.storage.page import Page
+from storage.disk_manager import DiskManager
+from storage.page import Page
 
 class HeapFile:
 

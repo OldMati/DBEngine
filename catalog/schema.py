@@ -16,7 +16,7 @@ class Column:
     max_length: int | None = None
 
 
-class Schema():
+class Schema:
     def __init__(self, columns: list[Column]):
         ID_column = Column('ID', DataType.INT)
         self.columns = [ID_column] + columns
