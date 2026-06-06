@@ -14,9 +14,9 @@ class Page:
     # is_valid = 1: True
     # is_valid = 0: False
 
-    def __init__(self, data: bytes | None = None):
-        if data is None:
-            self.page = bytearray(self.PAGE_SIZE)
+    def __init__(self, data: bytes, new_page: bool | None = False):
+        if new_page:
+            self.page = data
             self.num_slots = 0
             self.free_space_pointer = self.PAGE_SIZE
             self.free_space = self.PAGE_SIZE - self.HEADER_SIZE
@@ -47,14 +47,16 @@ class Page:
         struct.pack_into('H', self.page, slot_arr_offset + 4, 1)
 
 
-        print('####### FREE SPACE BEFORE SUBTRACTING: ', self.free_space)
+        #print('####### FREE SPACE BEFORE SUBTRACTING: ', self.free_space)
         self.free_space_pointer -= length
         self.free_space -= (length + self.SLOT_SIZE)
         self.num_slots += 1
         struct.pack_into('H', self.page, 0, self.num_slots)
         struct.pack_into('H', self.page, 2, self.free_space_pointer)
-        print('####### FREE SPACE AFTER SUBTRACTING: ', self.free_space)
+        #print('####### FREE SPACE AFTER SUBTRACTING: ', self.free_space)
         struct.pack_into('H', self.page, 4, self.free_space)
+
+        return self.num_slots - 1
 
 
 

@@ -13,6 +13,7 @@ class LRUKReplacer:
         self.current_time = 0
 
     def record_access(self, frame_id: int):
+        #print(self.history)
         self.history[frame_id].append(self.current_time)
         self.current_time += 1
     
@@ -42,6 +43,7 @@ class LRUKReplacer:
                 last_use = queue[0]
                 evict_id = frame_id
 
+        print('Evicting page with frame_id: ', evict_id)
         self.evictable.discard(evict_id)
-        self.history.pop(evict_id)
-        return evict_id   
+        self.history[evict_id] = deque(maxlen=K)
+        return evict_id
