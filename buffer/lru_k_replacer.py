@@ -1,6 +1,6 @@
 from collections import deque
 
-NUM_FRAMES = 1024
+NUM_FRAMES = 20
 K = 2
 
 class LRUKReplacer:
@@ -46,4 +46,5 @@ class LRUKReplacer:
         #print('Evicting page with frame_id: ', evict_id)
         self.evictable.discard(evict_id)
         self.history[evict_id] = deque(maxlen=K)
+        #print('Evict_id: ', evict_id)
         return evict_id

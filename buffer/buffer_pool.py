@@ -15,17 +15,16 @@ class BufferPoolManager:
         self.replacer = LRUKReplacer()
         #print('NUMBER OF FREE FRAMES: ', len(self.free_frames))
         #print('FREE FRAMES: ', NUM_FRAMES)
-
-    
     
     def fetch_page(self, page_id: int) -> bytearray:
         #print('Buffer pool: adding page_id: ', page_id, 'to the table')
         # cache hit, return from memory
         if page_id in self.page_table:
+            frame_id = self.page_table[page_id]
+            self.pin_count[frame_id] += 1
             # print(f'cache hit, {page_id} in memory')
-            self.pin_count[page_id] += 1
-            self.replacer.record_access(page_id)
-            return self.frames[self.page_table[page_id]]
+            self.replacer.record_access(frame_id)
+            return self.frames[frame_id]
 
         # find a free frame
         if self.free_frames:
@@ -33,12 +32,15 @@ class BufferPoolManager:
         else:
             frame_id = self.replacer.evict()
             old_page_id = self.frame_table[frame_id]
-            self.page_table.pop(old_page_id)
+            if old_page_id in self.page_table:
+                self.page_table.pop(old_page_id)
             if self.dirty[frame_id]:
-                self.disk_manager.write_page(self.frames[frame_id])
+                self.disk_manager.write_page(old_page_id, self.frames[frame_id])
         
         # update the tables
         self.frame_table[frame_id] = page_id
+        if page_id == 0:
+            print('ADDED PAGE_ID = 0 to page_table')
         self.page_table[page_id] = frame_id
         self.frames[frame_id] = self.disk_manager.read_page(page_id)
 
@@ -88,8 +90,8 @@ class BufferPoolManager:
         page_id = self.disk_manager.allocate_page()
         #page_raw = bytearray(PAGE_SIZE)
         return page_id #page_raw
+        # write 4096 bytes to the file
         
-
     def close(self):
         for frame_id in range(NUM_FRAMES):
             if self.dirty[frame_id]:
