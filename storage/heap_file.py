@@ -84,6 +84,3 @@ class HeapFile:
         directory = DirectoryPage(dir_raw)
         directory.createDirectory()
         self.bpm.flush_page(0)
-
-        
-

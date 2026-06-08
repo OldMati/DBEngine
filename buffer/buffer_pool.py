@@ -18,7 +18,7 @@ class BufferPoolManager:
 
     
     
-    def fetch_page(self, page_id: int):
+    def fetch_page(self, page_id: int) -> bytearray:
         # cache hit, return from memory
         if page_id in self.page_table:
             print(f'cache hit, {page_id} in memory')
@@ -84,8 +84,8 @@ class BufferPoolManager:
 
     def allocate_page(self) -> int:
         page_id = self.disk_manager.allocate_page()
-        page_raw = bytearray(PAGE_SIZE)
-        return page_id, page_raw
+        #page_raw = bytearray(PAGE_SIZE)
+        return page_id #page_raw
         
 
     def close(self):

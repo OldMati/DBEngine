@@ -1,0 +1,198 @@
+from buffer.buffer_pool import BufferPoolManager
+from index.b_tree_page import BTreePage
+import struct
+import os
+
+class BPlusTree:
+    # page 0: [root_page_id (4 bytes), num_keys (4 bytes)]
+    # page 1+: root/leaf/inner node
+
+    def __init__(self, bpm:BufferPoolManager, index_file: str):
+        self.bpm = BufferPoolManager(index_file)
+        self.index_file = index_file
+
+        if not os.path.exists(index_file):
+            self.root_page_id = 1
+            self.num_keys = 0
+            self._write_metadata()
+        else:
+            self._read_metadata()
+
+    def insert(self, key: int, rid: tuple[int, int]):
+        # find the correct leaf node
+        leaf_node, path = self._find_leaf(key)
+
+        # insert the key into the node
+        # find the index of the key in sorted order
+        leaf_node.insert(key, rid)
+        self.num_keys += 1
+
+        # check if node has enough space
+        if not leaf_node.is_overflow():
+            leaf_node.serialize()
+            self.bpm.unpin_page(leaf_node.page_id, True)
+            return
+        
+        # node does not have enough space -> split
+        self._split_leaf(leaf_node, path)
+
+    def _split_leaf(self, leaf_node: BTreePage, path: list[int]):
+        # create new node
+        new_page_id = self.bpm.allocate_page()
+        new_node = BTreePage(self.bpm.fetch_page(new_page_id), True, new_page_id, True)
+
+        # calculate split_index
+        split_index = leaf_node.num_keys // 2
+
+        # copy half the keys into the new node
+        new_node.keys = leaf_node.keys[split_index:]
+        new_node.RIDs = leaf_node.RIDs[split_index:]
+
+        # remove them from the original node
+        del leaf_node.keys[split_index:]
+        del leaf_node.RIDs[split_index:]
+
+        new_node.num_keys = len(new_node.keys)
+        leaf_node.num_keys = len(leaf_node.keys)
+
+        # adjust the pointers
+        new_node.next_leaf = leaf_node.next_leaf
+        leaf_node.next_leaf = new_node.page_id
+        new_node.prev_leaf = leaf_node.page_id
+
+        # fix the pointers of the neighboring leafs
+        next_leaf_page_id = new_node.next_leaf
+        if next_leaf_page_id > 0:
+            next_leaf = BTreePage(self.bpm.fetch_page(next_leaf_page_id))
+            next_leaf.prev_leaf = new_node.page_id
+            next_leaf.serialize()
+            self.bpm.unpin_page(next_leaf_page_id, True)
+        
+        # write the nodes into the disc
+        leaf_node.serialize()
+        new_node.serialize()
+
+        self.bpm.unpin_page(leaf_node.page_id, True)
+        self.bpm.unpin_page(new_node.page_id, True)
+
+        # update the parent node
+        index_of_parent = len(path) - 2
+        self._update_parent(path, index_of_parent, new_node)
+        
+    def _update_parent(self, path: list[int], idx: int, new_node: BTreePage, separator: int | None = None):
+        node_page_id = path[idx]
+        node = BTreePage(self.bpm.fetch_page(node_page_id))
+        
+        # insert new key into the node
+        min_key = separator if separator else new_node.keys[0]
+        pointer = new_node.page_id
+
+        node.insert_pointer(min_key, pointer)
+
+        # check if node has enough space
+        if not node.is_overflow():
+            node.serialize()
+            self.bpm.unpin_page(node.page_id, True)
+            return
+        
+        # node does not have enough space -> split
+        self._split_internal(node, path, idx)
+
+    def _split_internal(self, node: BTreePage, path: list[int], idx: int):
+        # create new node
+        new_page_id = self.bpm.allocate_page()
+        new_node = BTreePage(raw=self.bpm.fetch_page(new_page_id), new_page=True, page_id=new_page_id, is_leaf=False)
+
+        # update num_keys
+        split_index = node.num_keys // 2
+
+        # copy half the keys into the new node
+        new_node.keys = node.keys[split_index + 1:]
+        new_node.pointers = node.pointers[split_index + 1:]
+
+        # store the split key
+        split_key = node.keys[split_index]
+
+        # remove elements from the original node
+        del node.keys[split_index:]
+        del node.pointers[split_index + 1:]
+        
+        # write the nodes into the disc
+        node.serialize()
+        new_node.serialize()
+        self.bpm.unpin_page(node.page_id, True)
+        self.bpm.unpin_page(new_node.page_id, True)
+
+        # update the parent node
+        if idx == 0:
+            # create new root
+            self._split_root(node, new_node, split_key)
+        else:
+        # else update parent
+            self._update_parent(path, idx - 1, new_node, split_key)
+
+    def _split_root(self, node: BTreePage, new_node: BTreePage, separator: int):
+        self.root_page_id = page_id = self.bpm.allocate_page()
+
+        root_node = BTreePage(self.bpm.fetch_page(page_id), True, page_id, False)
+        root_node.pointers[0] = node.page_id
+        root_node.insert_pointer(separator, new_node.page_id)
+        root_node.serialize()
+
+        self.bpm.unpin_page(page_id, True)
+
+        self._write_metadata()
+
+
+    def _find_leaf(self, key) -> BTreePage:
+        # fetch the root page
+        root_page = BTreePage(self.bpm.fetch_page(self.root_page_id))
+        path = [self.root_page_id]
+
+        node = root_page
+
+        # while node is an inner node
+        while not node.is_leaf:
+            if key < node.keys[0]:
+                page_id = node.pointers[0]
+            else:
+                # linear search until key >= keys[i]
+                for i in range(node.num_keys):
+                    if key >= node.keys[i]:
+                        page_id = node.pointers[i + 1]
+                        break
+
+            self.bpm.unpin_page(node.page_id)
+            node = BTreePage(self.bpm.fetch_page(page_id))
+            path.append(node.page_id)
+        
+        return node, path
+
+    def search(self, key) -> tuple[int, int] | None:
+        # find the correct leaf
+        leaf_node, _ = self._find_leaf(key)
+        
+        # search the leaf
+        rid = leaf_node.lookup(key)
+
+        self.bpm.unpin_page(leaf_node.page_id)
+        return rid
+
+
+    def range_scan(self, start_key, end_key) -> list:
+        pass
+
+    def delete(self, kay):
+        pass
+
+    def _read_metadata(self):
+        raw = self.bpm.fetch_page(0)
+        self.root_page_id = struct.unpack_from('I', raw, 0)[0]
+        self.num_keys = struct.unpack_from('I', raw, 4)[0]
+        self.bpm.unpin_page(0)
+    
+    def _write_metadata(self):
+        raw = self.bpm.fetch_page(0)
+        struct.pack_into('I', raw, 0, self.root_page_id)
+        struct.pack_into('I', raw, 4, self.num_keys)
+        self.bpm.unpin_page(0, True)
