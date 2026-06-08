@@ -43,7 +43,7 @@ class LRUKReplacer:
                 last_use = queue[0]
                 evict_id = frame_id
 
-        print('Evicting page with frame_id: ', evict_id)
+        #print('Evicting page with frame_id: ', evict_id)
         self.evictable.discard(evict_id)
         self.history[evict_id] = deque(maxlen=K)
         return evict_id

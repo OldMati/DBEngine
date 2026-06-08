@@ -1,7 +1,7 @@
 import struct
 
 # max children per node
-ORDER = 200
+ORDER = 100
 
 # internal node: [is_leaf(1) | page_id(4) | num_keys(2) | n+1 pointers(4 each) | n keys(4 each)]
 # leaf node: [is_leaf(1) | page_id(4) | num_keys(2) | prev_leaf(4) | next_leaf(4) | n keys(4 each) | n rids(8 each)]
@@ -17,7 +17,7 @@ class BTreePage:
     prev_leaf: int | None
     RIDs: list[tuple[int, int]] | None
 
-    def __init__(self, raw, new_page: bool, page_id: int | None, is_leaf: int | None):
+    def __init__(self, raw, new_page: bool = False, page_id: int | None = None, is_leaf: int | None = None):
         self.page_raw = raw
         self.keys = []
         if not new_page:
@@ -25,9 +25,9 @@ class BTreePage:
             return
 
         # is new page
+        self.num_keys = 0
         self.page_id = page_id
         self.is_leaf = is_leaf
-        self.keys = []
 
         if is_leaf:
             self.RIDs = []
@@ -39,7 +39,7 @@ class BTreePage:
 
     def serialize(self):
         raw = self.page_raw
-
+        assert type(raw) == bytearray
         # write is_lead, page_id and num_keys
         struct.pack_into('?', raw, 0, self.is_leaf)
         struct.pack_into('I', raw, 1, self.page_id)
@@ -87,6 +87,7 @@ class BTreePage:
         self.is_leaf = struct.unpack_from('?', raw, 0)[0]
         self.page_id = struct.unpack_from('I', raw, 1)[0]
         self.num_keys = struct.unpack_from('H', raw, 5)[0]
+
         offset = 7
         n = self.num_keys
 
@@ -116,14 +117,16 @@ class BTreePage:
                 offset += 8
             
         else:
+            #print('not self.leaf')
             # read the pointers (page_ids)
+            self.pointers = []
             for _ in range(n + 1):
                 self.pointers.append(struct.unpack_from('I', raw, offset)[0])
                 offset += 4
             
             # read the keys
             for _ in range(n):
-                self.pointers.append(struct.unpack_from('i', raw, offset)[0])
+                self.keys.append(struct.unpack_from('i', raw, offset)[0])
                 offset += 4
     
     def is_overflow(self) -> bool:
@@ -131,34 +134,44 @@ class BTreePage:
     
     def insert(self, key: int, rid: tuple[int, int]):
         for i in range(self.num_keys):
-            if key < self.keys[i]:
-                self.keys.insert(i, key)
-                self.RIDs.insert(i, rid)
-                self.num_keys += 1
+            if key <= self.keys[i]:
+                if key == self.keys[i]:
+                    self.RIDs[i] = rid
+                else:
+                    self.keys.insert(i, key)
+                    self.RIDs.insert(i, rid)
+                    self.num_keys += 1
                 return
+        self.keys.append(key)
+        self.RIDs.append(rid)
+        self.num_keys += 1
 
     def lookup(self, key: int) -> tuple[int, int] | None:
         for i in range(self.num_keys):
             if key == self.keys[i]:
                 return self.RIDs[i]
     
+        return None
+    
     def remove_key(self, key:int):
         for i in range(self.num_keys):
             if key == self.keys[i]:
                 self.keys.pop(i)
                 self.RIDs.pop(i)
+                self.keys -= 1
                 return
 
     def insert_pointer(self, min_key: int, pointer: int):
-        self.num_keys += 1
 
         # find the index for the insert
         for i in range(self.num_keys):
             if min_key < self.keys[i]:
                 self.keys.insert(i, min_key)
                 self.pointers.insert(i + 1, pointer)
+                self.num_keys += 1
                 return
             
         # key is the largest in the array
         self.keys.append(min_key)
         self.pointers.append(pointer)
+        self.num_keys += 1

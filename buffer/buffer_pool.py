@@ -19,9 +19,10 @@ class BufferPoolManager:
     
     
     def fetch_page(self, page_id: int) -> bytearray:
+        #print('Buffer pool: adding page_id: ', page_id, 'to the table')
         # cache hit, return from memory
         if page_id in self.page_table:
-            print(f'cache hit, {page_id} in memory')
+            # print(f'cache hit, {page_id} in memory')
             self.pin_count[page_id] += 1
             self.replacer.record_access(page_id)
             return self.frames[self.page_table[page_id]]
@@ -54,10 +55,11 @@ class BufferPoolManager:
         return self.frames[frame_id]
     
     def unpin_page(self, page_id: int, is_dirty: bool = False):
+        #print('Buffer pool: removing ', page_id, 'from the table')
         if page_id not in self.page_table:
             return False
 
-        frame_id = self.frame_table[page_id]
+        frame_id = self.page_table[page_id]
 
         if self.pin_count[frame_id] == 0:
             return False

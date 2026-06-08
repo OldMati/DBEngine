@@ -7,16 +7,32 @@ class BPlusTree:
     # page 0: [root_page_id (4 bytes), num_keys (4 bytes)]
     # page 1+: root/leaf/inner node
 
-    def __init__(self, bpm:BufferPoolManager, index_file: str):
-        self.bpm = BufferPoolManager(index_file)
+    def __init__(self, bpm:BufferPoolManager, index_file: str, new_index = False):
+        #self.bpm = BufferPoolManager(index_file)
+        #new_index = not os.path.exists(index_file)
+        self.bpm = bpm
         self.index_file = index_file
 
-        if not os.path.exists(index_file):
+        #print('BPlusTre __init__ method is called')
+
+        if new_index:
+            print('new index, creating root')
+            # allocate page for the header
+            bpm.allocate_page()
+            # create root page
             self.root_page_id = 1
             self.num_keys = 0
             self._write_metadata()
+            root_page = BTreePage(bpm.fetch_page(bpm.allocate_page()), True, 1, True)
+            root_page.serialize()
+            self.bpm.unpin_page(self.root_page_id, True)
+            assert root_page.page_id == 1
+            assert root_page.is_leaf == True
         else:
+            print('file does exist in os, reading metadata')
             self._read_metadata()
+            print('root_id: ', self.root_page_id)
+    
 
     def insert(self, key: int, rid: tuple[int, int]):
         # find the correct leaf node
@@ -24,11 +40,20 @@ class BPlusTree:
 
         # insert the key into the node
         # find the index of the key in sorted order
+        # if key > 200:
+        #     print(f'Saerching for key={key}, leaf found: {leaf_node.page_id}, num_keys: {leaf_node.num_keys}, min_key: {leaf_node.keys[0]}, max_key: {leaf_node.keys[-1]}')
+            
         leaf_node.insert(key, rid)
         self.num_keys += 1
 
+        # if key > 200:
+        #     print(f'last key of the leaf node: {leaf_node.keys[-1]}, key: {key}')
+
         # check if node has enough space
         if not leaf_node.is_overflow():
+            #if key % 50 == 0:
+                #print('leaf node did not overflow at inserting key', key)
+            #print('num_keys of page_1: ', leaf_node.num_keys)
             leaf_node.serialize()
             self.bpm.unpin_page(leaf_node.page_id, True)
             return
@@ -40,6 +65,7 @@ class BPlusTree:
         # create new node
         new_page_id = self.bpm.allocate_page()
         new_node = BTreePage(self.bpm.fetch_page(new_page_id), True, new_page_id, True)
+        #print('allocated new_page_id for new page: ', new_page_id, new_node.page_id)
 
         # calculate split_index
         split_index = leaf_node.num_keys // 2
@@ -63,21 +89,29 @@ class BPlusTree:
         # fix the pointers of the neighboring leafs
         next_leaf_page_id = new_node.next_leaf
         if next_leaf_page_id > 0:
+            #print('detching next_leaf_page_id: ', next_leaf_page_id)
             next_leaf = BTreePage(self.bpm.fetch_page(next_leaf_page_id))
             next_leaf.prev_leaf = new_node.page_id
             next_leaf.serialize()
             self.bpm.unpin_page(next_leaf_page_id, True)
         
+
+        #print('not fetching next_leaf_page_id: ', next_leaf_page_id)
         # write the nodes into the disc
         leaf_node.serialize()
         new_node.serialize()
 
+        #print('now unpinning the new leaf node, page_id: ', new_node.page_id)
         self.bpm.unpin_page(leaf_node.page_id, True)
         self.bpm.unpin_page(new_node.page_id, True)
 
         # update the parent node
         index_of_parent = len(path) - 2
-        self._update_parent(path, index_of_parent, new_node)
+
+        if index_of_parent >= 0:
+            self._update_parent(path, index_of_parent, new_node)
+        else:
+            self._split_root(leaf_node, new_node, new_node.keys[0])
         
     def _update_parent(self, path: list[int], idx: int, new_node: BTreePage, separator: int | None = None):
         node_page_id = path[idx]
@@ -117,6 +151,9 @@ class BPlusTree:
         del node.keys[split_index:]
         del node.pointers[split_index + 1:]
         
+        node.num_keys = len(node.keys)
+        new_node.num_keys = len(new_node.keys)
+
         # write the nodes into the disc
         node.serialize()
         new_node.serialize()
@@ -135,17 +172,22 @@ class BPlusTree:
         self.root_page_id = page_id = self.bpm.allocate_page()
 
         root_node = BTreePage(self.bpm.fetch_page(page_id), True, page_id, False)
-        root_node.pointers[0] = node.page_id
+        root_node.pointers.append(node.page_id)
         root_node.insert_pointer(separator, new_node.page_id)
         root_node.serialize()
 
         self.bpm.unpin_page(page_id, True)
+        print('THE ROOT AFTER FIRST SPLIT:')
+        print(f'keys: {root_node.keys}' )
+        print(f'pointers: {root_node.pointers}' )
+        print(f'id: {root_node.page_id}' )
 
         self._write_metadata()
 
 
-    def _find_leaf(self, key) -> BTreePage:
+    def _find_leaf(self, key) -> tuple[BTreePage, list]:
         # fetch the root page
+        #print(f'root_page_id: ', self.root_page_id)
         root_page = BTreePage(self.bpm.fetch_page(self.root_page_id))
         path = [self.root_page_id]
 
@@ -153,25 +195,30 @@ class BPlusTree:
 
         # while node is an inner node
         while not node.is_leaf:
-            if key < node.keys[0]:
-                page_id = node.pointers[0]
-            else:
-                # linear search until key >= keys[i]
-                for i in range(node.num_keys):
-                    if key >= node.keys[i]:
-                        page_id = node.pointers[i + 1]
-                        break
+            #print('Linear search of keys in page ', node.page_id)
+            #print('keys: ', node.keys)
+            # linear search until key >= keys[i]
+            page_id = node.pointers[0]
+            for i in range(node.num_keys - 1, -1, -1):
+                if key >= node.keys[i]:
+                    #print('Chosen node key: ', node.keys[i])
+                    page_id = node.pointers[i + 1]
+                    break
 
             self.bpm.unpin_page(node.page_id)
             node = BTreePage(self.bpm.fetch_page(page_id))
             path.append(node.page_id)
-        
+        #print('Correct leafnode: ', node.page_id, 'path: ', path)
+        min_key = node.keys[0] if node.keys else -1000
+        max_key = node.keys[-1] if node.keys else 99999999
+        #print(f'Saerching for key={key}, leaf found: {node.page_id}, num_keys: {node.num_keys}, min_key: {min_key}, max_key: {max_key}')
+        #if node.keys:
+            #print(node.keys)
         return node, path
 
     def search(self, key) -> tuple[int, int] | None:
         # find the correct leaf
         leaf_node, _ = self._find_leaf(key)
-        
         # search the leaf
         rid = leaf_node.lookup(key)
 
