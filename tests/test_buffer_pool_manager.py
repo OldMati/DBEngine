@@ -7,12 +7,6 @@ import os
 filepath = 'tests/bpm.db'
 bpm = BufferPoolManager(filepath)
 
-def test_eviction():
-    pages = [_ for _ in range(30)]
-    raw = []
-    for page_id in pages:
-        raw.append(bpm.fetch_page(page_id))
-
 def test_page_allocation():
     pages_set = set()
     for i in range(100):

@@ -4,7 +4,7 @@ import struct
 
 class DataType(Enum):
     INT = 'i'       # 4 bytes
-    FLOAT = 'f'     # 8 bytes
+    FLOAT = 'd'     # 8 bytes
     BOOL = '?'      # 1 byte
     VARCHAR = 's'   # variable length
 
@@ -36,12 +36,13 @@ class Schema:
         header = []
 
         # add the id column
+        row = row.copy()
         row['ID'] = self.next_id
         self.next_id += 1
 
         for column in self.columns:
             if column.type == DataType.VARCHAR:
-                if column.max_length and row[column.name] > column.max_length:
+                if column.max_length and len(row[column.name]) > column.max_length:
                     return False
                 
                 raw_data = row[column.name].encode('utf-8')

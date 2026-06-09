@@ -33,10 +33,10 @@ def test_leaf_linkage():
     keys = [i for i in range(1024)]
     pages = [tree._find_leaf(key)[0] for key in keys]
     page_table = {page.page_id: page for page in pages}
-    print([page_id for page_id in page_table])
+    #print([page_id for page_id in page_table])
 
     for page_id in page_table:
-        print('page_id checked: ', page_id)
+        #print('page_id checked: ', page_id)
         if pages[page_id].next_leaf != -1:
             assert pages[page_id].page_id == page_table[pages[page_id].next_leaf].prev_leaf
         
@@ -49,8 +49,6 @@ def test_leaf_linkage():
     while page.next_leaf >= 0:
         max_key = page.keys[-1]
 
-        if page.next_leaf not in page_table:
-            print(f'next leaf id: {page.next_leaf}, page_table:')
         next_page = page_table[page.next_leaf]
         next_min_key = next_page.keys[0]
 
