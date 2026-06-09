@@ -1,2 +1,9 @@
-tests/
+tests/test.db
+tests/test.py
 dcker.txt
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
