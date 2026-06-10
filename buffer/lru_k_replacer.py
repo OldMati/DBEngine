@@ -1,14 +1,12 @@
 from collections import deque
 
-NUM_FRAMES = 20
+NUM_FRAMES = 1024
 K = 2
 
 class LRUKReplacer:
 
     def __init__(self):
-        self.history = {
-            i: deque(maxlen=K) for i in range(NUM_FRAMES)
-        }
+        self.history = [deque(maxlen=K) for i in range(NUM_FRAMES)]
         self.evictable = set()
         self.current_time = 0
 
@@ -23,28 +21,29 @@ class LRUKReplacer:
         else:
             self.evictable.discard(frame_id)
         
-    def evict(self) -> int:
+    def evict(self) -> int | None:
+        # no frames to evict
+        if len(self.evictable) == 0:
+            return None
+        
         evict_id = 0
-        last_use = self.current_time
-        found_infinity = False
+        last_use = float('inf')
+        found_inf = False
 
+        # find the frame to evict
         for frame_id in self.evictable:
             queue = self.history[frame_id]
+
             if len(queue) < K:
-                if found_infinity and queue[0] < last_use or not found_infinity:
-                    found_infinity = True
+                if not found_inf or queue[0] < last_use:
+                    found_inf = True
                     last_use = queue[0]
                     evict_id = frame_id
-                    continue
-            if found_infinity:
-                continue
-                
-            if queue[0] < last_use:
-                last_use = queue[0]
-                evict_id = frame_id
+            elif not found_inf:
+                if queue[0] < last_use:
+                    last_use = queue[0]
+                    evict_id = frame_id
 
-        #print('Evicting page with frame_id: ', evict_id)
-        self.evictable.discard(evict_id)
+        self.evictable.remove(evict_id)
         self.history[evict_id] = deque(maxlen=K)
-        #print('Evict_id: ', evict_id)
         return evict_id
