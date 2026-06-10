@@ -25,7 +25,6 @@ def test_delete():
     page.delete_tuple(1)
     assert page.get_tuple(1) == None
 
-
     assert type(page.get_tuple(19)) == bytearray
     page.delete_tuple(19)
     assert page.get_tuple(19) == None
