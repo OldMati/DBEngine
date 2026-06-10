@@ -61,6 +61,9 @@ class Page:
 
 
     def get_tuple(self, slot_id:int) -> bytearray | None:
+        if slot_id >= self.num_slots:
+            return None
+        
         slot_offset = self.HEADER_SIZE + slot_id * self.SLOT_SIZE
 
         tuple_offset = struct.unpack_from('H', self.page, slot_offset)[0]
