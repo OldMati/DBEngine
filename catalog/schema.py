@@ -15,12 +15,20 @@ class Column:
     type: DataType
     max_length: int | None = None
 
+class Record:
+    values: tuple
+    rid: tuple[int, int]
+
+    def __init__(self, values, rid):
+        self.values = values
+        self.rid = rid
 
 class Schema:
+    columns: list[Column]
+    column_names: dict[str, int] # column name -> index
+
     def __init__(self, columns: list[Column]):
-        ID_column = Column('ID', DataType.INT)
-        self.columns = [ID_column] + columns
-        self.next_id = 1
+        self.columns = columns.copy()
 
         # count varchars
         count = 0
@@ -28,68 +36,88 @@ class Schema:
             if column.type == DataType.VARCHAR:
                 count += 1
         
-        self.NUM_OF_VARCHARS = count
+        self.num_of_varchars = count
+
+        # create the column_names dict
+        self.column_names = {}
+        for i in range(len(columns)):
+            self.column_names[columns[i].name] = i
 
 
-    def serialize(self, row: dict) -> bytes:
-        raw_arr = []
+    def serialize(self, row: Record) -> bytes:
+        raw_arr = ['' for _ in range(len(self.columns))]
         header = []
 
-        # add the id column
-        row = row.copy()
-        row['ID'] = self.next_id
-        self.next_id += 1
-
         for column in self.columns:
+            col_index = self.column_names[column.name]
             if column.type == DataType.VARCHAR:
-                if column.max_length and len(row[column.name]) > column.max_length:
+                #print('SERIALIZING THE VARCHAR NOW, length of column: ', len(row.values[col_index]), 'max length: ', column.max_length, ' column: ', row.values[col_index])
+                if column.max_length and len(row.values[col_index]) > column.max_length:
                     return False
                 
-                raw_data = row[column.name].encode('utf-8')
-                raw_arr.append(raw_data)
+                raw_data = row.values[col_index].encode('utf-8')
+                raw_arr[col_index] = raw_data
 
                 length = len(raw_data)
                 raw_length = struct.pack('H', length)   # 2 byte metadata storing the length of the varchar
                 header.append(raw_length)
             else:
-                raw_data = struct.pack(column.type.value, row[column.name])
-                raw_arr.append(raw_data)
+                raw_data = struct.pack(column.type.value, row.values[col_index])
+                raw_arr[col_index] = raw_data
 
-        
         # combine the header and raw into sequence of bits
         raw = b"".join(header + raw_arr)
         return raw
 
-
-
-    def deserialize(self, raw: bytes) -> dict:
+    def deserialize(self, raw: bytes, rid: tuple[int, int]) -> Record:
         # get the number and length of the varchars:
         lengths = []
-        for i in range(self.NUM_OF_VARCHARS):
+        for i in range(self.num_of_varchars):
             length = struct.unpack_from('H', raw, 2 * i)[0]
             lengths.append(length)
 
         # index of current varchar in lengths
         varchar_count = 0
 
-        # create the dict with deserialized data:
-        row = {}
-
         # data starts after the header
-        offset = 2 * self.NUM_OF_VARCHARS
+        offset = 2 * self.num_of_varchars
+        values = [_ for _ in range(len(self.columns))]
 
         for column in self.columns:
+            col_index = self.column_names[column.name]
             if column.type == DataType.VARCHAR:
                 # get the length of the string
                 length = lengths[varchar_count]
                 varchar_count += 1
 
-                row[column.name] = raw[offset: offset + length].decode()
+                values[col_index] = raw[offset: offset + length].decode()
                 offset += length
 
             else:
                 data = struct.unpack_from(column.type.value, raw, offset)[0]
-                row[column.name] = data
+                values[col_index] = data
                 offset += struct.calcsize(column.type.value)
         
-        return row
+        return Record(tuple(values), rid)
+
+    def to_dict(self) -> dict:
+        return {
+            'columns': [
+                {
+                    'name': col.name,
+                    'type': col.type.name,
+                    'max_length': col.max_length
+                }
+                for col in self.columns
+            ]
+        }
+    
+    @staticmethod
+    def from_dict(data: dict) -> 'Schema':
+        columns = []
+        for col in data['columns']:
+            column = Column(name=col['name'], type=DataType[col['type']], max_length=col.get('max_length'))
+            columns.append(column)
+        
+        return Schema(columns)
+        

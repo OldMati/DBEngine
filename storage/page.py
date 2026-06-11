@@ -88,5 +88,8 @@ class Page:
         # no tuple to remove
         return False
 
-    # def to_bytes(self) -> bytes:
-    #     pass
+    def scan(self):
+        for slot_id in range(self.num_slots):
+            raw = self.get_tuple(slot_id)
+            if raw is not None:
+                yield slot_id, raw

@@ -13,16 +13,12 @@ class BufferPoolManager:
         self.pin_count = [0 for _ in range(NUM_FRAMES)]
         self.dirty = [False for _ in range(NUM_FRAMES)]
         self.replacer = LRUKReplacer()
-        #print('NUMBER OF FREE FRAMES: ', len(self.free_frames))
-        #print('FREE FRAMES: ', NUM_FRAMES)
     
     def fetch_page(self, page_id: int) -> bytearray:
-        #print('Buffer pool: adding page_id: ', page_id, 'to the table')
         # cache hit, return from memory
         if page_id in self.page_table:
             frame_id = self.page_table[page_id]
             self.pin_count[frame_id] += 1
-            # print(f'cache hit, {page_id} in memory')
             self.replacer.record_access(frame_id)
             return self.frames[frame_id]
 
@@ -39,8 +35,6 @@ class BufferPoolManager:
         
         # update the tables
         self.frame_table[frame_id] = page_id
-        if page_id == 0:
-            print('ADDED PAGE_ID = 0 to page_table')
         self.page_table[page_id] = frame_id
         self.frames[frame_id] = self.disk_manager.read_page(page_id)
 

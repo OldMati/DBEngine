@@ -1,12 +1,17 @@
 import pytest
 from storage.heap_file import HeapFile
+from buffer.buffer_pool import BufferPoolManager
 import os
 
 filepath = 'tests/heap_file.db'
 
 def set_up_heap_file():
-    os.remove(filepath)
-    heap_file = HeapFile(filepath)
+    try:
+        os.remove(filepath)
+    except:
+        print('no such filepath')
+    bpm = BufferPoolManager(filepath)
+    heap_file = HeapFile(bpm, filepath)
     heap_file.create_directory()
     return heap_file
 
@@ -23,14 +28,14 @@ def test_insert_get_tuple():
         row = os.urandom(50)
         rid = heap_file.insert_tuple(row)
         rows[rid] = row
-        assert rows[rid] == heap_file.get_tuple(rid[0], rid[1])
+        assert rows[rid] == heap_file.get_tuple(rid)
 
     assert len(rows) == test_count
 
     # read tuples from file 
     for rid in rows:
         print('RID: ', rid)
-        assert rows[rid] == heap_file.get_tuple(rid[0], rid[1])
+        assert rows[rid] == heap_file.get_tuple(rid)
 
     heap_file.close()
 

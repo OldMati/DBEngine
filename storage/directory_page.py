@@ -10,11 +10,9 @@ class DirectoryPage:
         self.dir_raw = dir_raw
         self.free_space = {0: 0}
         if not new_directory:
-            print('NOT NEW DIRECTORY')
             self.deserialize()
         else:
             self.page_count = 1
-            print('Writing page_count to directory: ', self.page_count)
             struct.pack_into('H', self.dir_raw, 0, self.page_count)
 
     
@@ -24,7 +22,6 @@ class DirectoryPage:
 
     def deserialize(self):
         self.page_count = struct.unpack_from('H', self.dir_raw, 0)[0]
-        print('directory: page_count: ', self.page_count)
         offset = 2
         
         for _ in range(1, self.page_count):

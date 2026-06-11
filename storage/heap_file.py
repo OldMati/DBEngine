@@ -6,15 +6,16 @@ class HeapFile:
 
     # first page: directory
     # page_id >= 1: db
-    def __init__(self, filepath):
-        self.bpm = BufferPoolManager(filepath)
+    def __init__(self, bpm: BufferPoolManager, filepath: str):
+        self.bpm = bpm
         self.directory_id = 0
+        self.filepath = filepath
     
     def insert_tuple(self, data: bytes) -> tuple[int, int]:
+
         # load the directory
         dir_raw = self.bpm.fetch_page(self.directory_id)
         directory = DirectoryPage(dir_raw)
-        # print('DIRECTORY FREE SPACE: ', directory.free_space)
         page_id = None
         new_page = False
 
@@ -23,7 +24,6 @@ class HeapFile:
         page_id = directory.find_page_with_enough_space(size)
         
         if not page_id:
-            print('no page has enough space, allocate new page')
             # no page has enough space, allocate new page
             page_id = self.bpm.allocate_page()
             directory.increase_page_count()
@@ -43,17 +43,44 @@ class HeapFile:
         self.bpm.unpin_page(self.directory_id, True)
         return (page_id, slot_id)
 
-    def get_tuple(self, page_id: int, slot_id: int) -> bytes:
+    def get_tuple(self, rid: tuple[int, int]) -> bytes:
+        page_id = rid[0]
+        slot_id = rid[1]
         page_raw = self.bpm.fetch_page(page_id)
         #print(page_raw)
         page = Page(page_raw)
         self.bpm.unpin_page(page_id)
-        data = page.get_tuple(slot_id)
-        return data
+        raw = page.get_tuple(slot_id)
+
+        return raw
+    
+    def delete_tuple(self, rid: tuple[int, int]) -> bool:
+        page_id = rid[0]
+        slot_id = rid[1]
+        page_raw = self.bpm.fetch_page(page_id)
+        page = Page(page_raw)
+        deleted = page.delete_tuple(slot_id)
+        self.bpm.unpin_page(page_id, deleted)
+        return deleted
 
     def scan(self):
-        pass
+        # load the directory
+        dir_raw = self.bpm.fetch_page(self.directory_id)
+        directory = DirectoryPage(dir_raw)
+        self.bpm.unpin_page(self.directory_id)
+        page_count = directory.page_count
 
+        # loop over all pages
+        for page_id in range(1, page_count):
+            # read the page
+            page_raw = self.bpm.fetch_page(page_id)
+            page = Page(page_raw)
+            self.bpm.unpin_page(page_id)
+            # scan the page
+            for slot_id, raw in page.scan():
+                # yield rid, raw
+                yield (page_id, slot_id), raw
+        
     def close(self):
         self.bpm.close()
 
