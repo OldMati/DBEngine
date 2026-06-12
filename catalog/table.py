@@ -26,3 +26,6 @@ class Table:
         for rid, raw in self.heap_file.scan():
             record = self.schema.deserialize(raw, rid)
             yield record
+    
+    def get_index(self, col_name: str):
+        return self.schema.get_index(col_name)

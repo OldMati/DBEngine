@@ -16,7 +16,7 @@ class BPlusTree:
         #print('BPlusTre __init__ method is called')
 
         if new_index:
-            print('new index, creating root')
+            #print('new index, creating root')
             # allocate page for the header
             bpm.allocate_page()
             # create root page

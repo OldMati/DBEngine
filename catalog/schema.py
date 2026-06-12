@@ -100,6 +100,12 @@ class Schema:
         
         return Record(tuple(values), rid)
 
+    def get_index(self, column_name: str):
+        if column_name in self.column_names:
+            return self.column_names[column_name]
+        
+        raise KeyError(f"Column '{column_name}' not found in schema")
+
     def to_dict(self) -> dict:
         return {
             'columns': [
