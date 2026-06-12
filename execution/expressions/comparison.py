@@ -16,6 +16,10 @@ class Comparison(Expression):
         self.op = op
         self.right = right
     
+    def bind(self, schema):
+        self.left.bind(schema)
+        self.right.bind(schema)
+    
     def evaluate(self, record = None, schema = None):
         l = self.left.evaluate(record, schema)
         r = self.right.evaluate(record, schema)

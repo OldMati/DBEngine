@@ -5,10 +5,11 @@ class Filter(Operator):
     child: Operator
     predicate: Expression
 
-    def open(self, child: Operator, predicate):
+    def open(self, child: Operator, predicate: Expression):
         self.child = child
         self.predicate = predicate
         self.schema = self.child.output_schema()
+        predicate.bind(self.schema)
         child.open()
     
     def next(self):

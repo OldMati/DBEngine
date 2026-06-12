@@ -7,7 +7,7 @@ class ColumnRef(Expression):
         self.column_name: column_name
         self._index = None
     
-    def bind(self, schema: Schema):
+    def bind(self, schema):
         self._index = schema.get_index(self.column_name)
     
     def evaluate(self, record: tuple, schema: Schema):

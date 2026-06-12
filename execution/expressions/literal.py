@@ -9,3 +9,6 @@ class Literal(Expression):
     def evaluate(self, record = None, schema = None):
         return self.value
         
+    def bind(self, schema):
+        pass
+        

@@ -5,3 +5,7 @@ class Expression(ABC):
     @abstractmethod
     def evaluate(self, record, schema):
         pass
+
+    @abstractmethod
+    def bind(self, schema):
+        pass

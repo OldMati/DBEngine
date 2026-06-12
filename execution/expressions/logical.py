@@ -5,6 +5,10 @@ class And(Expression):
         self.left = left
         self.right = right
     
+    def bind(self, schema):
+        self.left.bind(schema)
+        self.right.bind(schema)
+
     def evaluate(self, record, schema):
         l = self.left.evaluate(record, schema)
         r = self.right.evaluate(record, schema)
@@ -16,6 +20,10 @@ class Or(Expression):
         self.left = left
         self.right = right
     
+    def bind(self, schema):
+        self.left.bind(schema)
+        self.right.bind(schema)
+
     def evaluate(self, record, schema):
         l = self.left.evaluate(record, schema)
         r = self.right.evaluate(record, schema)
