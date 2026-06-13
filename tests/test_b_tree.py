@@ -3,9 +3,9 @@ from index.b_tree import BPlusTree
 from buffer.buffer_pool import BufferPoolManager
 import os
 
-index_filepath = 'tests/index.db'
-bpm = BufferPoolManager(index_filepath)
-tree = BPlusTree(bpm, index_filepath, True)
+file_id = 5
+bpm = BufferPoolManager()
+tree = BPlusTree(bpm, file_id, True)
 
 def test_insert_and_search():
     tree.insert(1, (1, 1))
@@ -59,4 +59,4 @@ def test_leaf_linkage():
 
 def test_close():
     bpm.close()
-    os.remove(index_filepath)
+    os.remove(f'data/{file_id}.db')

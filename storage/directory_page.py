@@ -32,14 +32,16 @@ class DirectoryPage:
     def update_directory(self, page_id, free_space, tuple_count) -> bool | None:
         if page_id == 0 or page_id >= self.page_count or free_space < 0 or tuple_count < 0:
             return False
+        self.free_space[page_id] = free_space
         offset = 4 * page_id - 2
         struct.pack_into('H', self.dir_raw, offset, page_id)
         struct.pack_into('H', self.dir_raw, offset + 2, free_space)
         struct.pack_into('H', self.dir_raw, offset + 4, tuple_count)
     
-    def increase_page_count(self):
+    def increase_page_count(self, page_id: int):
         self.page_count += 1
         struct.pack_into('H', self.dir_raw, 0, self.page_count)
+        self.update_directory(page_id, PAGE_SIZE, 0)
     
     def find_page_with_enough_space(self, free_space):
         for page_id in self.free_space:

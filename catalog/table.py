@@ -1,15 +1,16 @@
 from storage.heap_file import HeapFile
-from schema import Schema, Record
+from catalog.schema import Schema, Record
 
 class Table:
     table_name: str
     heap_file: HeapFile
     schema: Schema
 
-    def __init__(self, table_name: str, heap_file: HeapFile, schema: Schema):
+    def __init__(self, table_name: str, heap_file: HeapFile, schema: Schema, file_id: int):
         self.table_name = table_name
         self.heap_file = heap_file
         self.schema = schema
+        self.file_id = file_id
 
     def insert(self, row: Record) -> tuple[int, int]:
         raw = self.schema.serialize(row)

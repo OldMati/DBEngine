@@ -3,15 +3,16 @@ from storage.heap_file import HeapFile
 from buffer.buffer_pool import BufferPoolManager
 import os
 
-filepath = 'tests/heap_file.db'
+filepath = 'data/998.db'
+file_id = 998
 
 def set_up_heap_file():
     try:
         os.remove(filepath)
     except:
         print('no such filepath')
-    bpm = BufferPoolManager(filepath)
-    heap_file = HeapFile(bpm, filepath)
+    bpm = BufferPoolManager()
+    heap_file = HeapFile(bpm=bpm, file_id=file_id)
     heap_file.create_directory()
     return heap_file
 
@@ -39,16 +40,22 @@ def test_insert_get_tuple():
 
     heap_file.close()
 
-
 # insert enough tuples to fill a page, verify the page count increased
 def test_page_count_increase():
     heap_file = set_up_heap_file()
-    size = 403
 
+    size = 403
+    row = os.urandom(size)
+    heap_file.insert_tuple(row)
+
+    page_count = heap_file._get_page_count()
+    print('PAGE COUNT: ', page_count)
     for _ in range(11):
         row = os.urandom(size)
         heap_file.insert_tuple(row)
     
-    assert heap_file._get_page_count() == 3
+    assert heap_file._get_page_count() == page_count + 1
+
+
 
 

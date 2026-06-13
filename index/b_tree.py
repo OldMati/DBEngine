@@ -7,25 +7,25 @@ class BPlusTree:
     # page 0: [root_page_id (4 bytes), num_keys (4 bytes)]
     # page 1+: root/leaf/inner node
 
-    def __init__(self, bpm:BufferPoolManager, index_file: str, new_index = False):
+    def __init__(self, bpm:BufferPoolManager, file_id: int, new_index = False):
         #self.bpm = BufferPoolManager(index_file)
         #new_index = not os.path.exists(index_file)
         self.bpm = bpm
-        self.index_file = index_file
+        self.file_id = file_id
 
         #print('BPlusTre __init__ method is called')
 
         if new_index:
             #print('new index, creating root')
             # allocate page for the header
-            bpm.allocate_page()
+            bpm.allocate_page(self.file_id)
             # create root page
             self.root_page_id = 1
             self.num_keys = 0
             self._write_metadata()
-            root_page = BTreePage(bpm.fetch_page(bpm.allocate_page()), True, 1, True)
+            root_page = BTreePage(bpm.fetch_page(bpm.allocate_page(self.file_id), self.file_id), True, 1, True)
             root_page.serialize()
-            self.bpm.unpin_page(self.root_page_id, True)
+            self.bpm.unpin_page(self.root_page_id, self.file_id, True)
             assert root_page.page_id == 1
             assert root_page.is_leaf == True
         else:
@@ -55,7 +55,7 @@ class BPlusTree:
                 #print('leaf node did not overflow at inserting key', key)
             #print('num_keys of page_1: ', leaf_node.num_keys)
             leaf_node.serialize()
-            self.bpm.unpin_page(leaf_node.page_id, True)
+            self.bpm.unpin_page(leaf_node.page_id, self.file_id, True)
             return
         
         # node does not have enough space -> split
@@ -63,8 +63,8 @@ class BPlusTree:
 
     def _split_leaf(self, leaf_node: BTreePage, path: list[int]):
         # create new node
-        new_page_id = self.bpm.allocate_page()
-        new_node = BTreePage(self.bpm.fetch_page(new_page_id), True, new_page_id, True)
+        new_page_id = self.bpm.allocate_page(self.file_id)
+        new_node = BTreePage(self.bpm.fetch_page(new_page_id, self.file_id), True, new_page_id, True)
         #print('allocated new_page_id for new page: ', new_page_id, new_node.page_id)
 
         # calculate split_index
@@ -90,10 +90,10 @@ class BPlusTree:
         next_leaf_page_id = new_node.next_leaf
         if next_leaf_page_id > 0:
             #print('detching next_leaf_page_id: ', next_leaf_page_id)
-            next_leaf = BTreePage(self.bpm.fetch_page(next_leaf_page_id))
+            next_leaf = BTreePage(self.bpm.fetch_page(next_leaf_page_id, self.file_id))
             next_leaf.prev_leaf = new_node.page_id
             next_leaf.serialize()
-            self.bpm.unpin_page(next_leaf_page_id, True)
+            self.bpm.unpin_page(next_leaf_page_id, self.file_id, True)
         
 
         #print('not fetching next_leaf_page_id: ', next_leaf_page_id)
@@ -102,8 +102,8 @@ class BPlusTree:
         new_node.serialize()
 
         #print('now unpinning the new leaf node, page_id: ', new_node.page_id)
-        self.bpm.unpin_page(leaf_node.page_id, True)
-        self.bpm.unpin_page(new_node.page_id, True)
+        self.bpm.unpin_page(leaf_node.page_id, self.file_id, True)
+        self.bpm.unpin_page(new_node.page_id, self.file_id, True)
 
         # update the parent node
         index_of_parent = len(path) - 2
@@ -115,7 +115,7 @@ class BPlusTree:
         
     def _update_parent(self, path: list[int], idx: int, new_node: BTreePage, separator: int | None = None):
         node_page_id = path[idx]
-        node = BTreePage(self.bpm.fetch_page(node_page_id))
+        node = BTreePage(self.bpm.fetch_page(node_page_id, self.file_id))
         
         # insert new key into the node
         min_key = separator if separator else new_node.keys[0]
@@ -126,7 +126,7 @@ class BPlusTree:
         # check if node has enough space
         if not node.is_overflow():
             node.serialize()
-            self.bpm.unpin_page(node.page_id, True)
+            self.bpm.unpin_page(node.page_id, self.file_id, True)
             return
         
         # node does not have enough space -> split
@@ -134,8 +134,8 @@ class BPlusTree:
 
     def _split_internal(self, node: BTreePage, path: list[int], idx: int):
         # create new node
-        new_page_id = self.bpm.allocate_page()
-        new_node = BTreePage(raw=self.bpm.fetch_page(new_page_id), new_page=True, page_id=new_page_id, is_leaf=False)
+        new_page_id = self.bpm.allocate_page(self.file_id)
+        new_node = BTreePage(raw=self.bpm.fetch_page(new_page_id, self.file_id), new_page=True, page_id=new_page_id, is_leaf=False)
 
         # update num_keys
         split_index = node.num_keys // 2
@@ -157,8 +157,8 @@ class BPlusTree:
         # write the nodes into the disc
         node.serialize()
         new_node.serialize()
-        self.bpm.unpin_page(node.page_id, True)
-        self.bpm.unpin_page(new_node.page_id, True)
+        self.bpm.unpin_page(node.page_id, self.file_id, True)
+        self.bpm.unpin_page(new_node.page_id, self.file_id, True)
 
         # update the parent node
         if idx == 0:
@@ -169,14 +169,14 @@ class BPlusTree:
             self._update_parent(path, idx - 1, new_node, split_key)
 
     def _split_root(self, node: BTreePage, new_node: BTreePage, separator: int):
-        self.root_page_id = page_id = self.bpm.allocate_page()
+        self.root_page_id = page_id = self.bpm.allocate_page(self.file_id)
 
-        root_node = BTreePage(self.bpm.fetch_page(page_id), True, page_id, False)
+        root_node = BTreePage(self.bpm.fetch_page(page_id, self.file_id), True, page_id, False)
         root_node.pointers.append(node.page_id)
         root_node.insert_pointer(separator, new_node.page_id)
         root_node.serialize()
 
-        self.bpm.unpin_page(page_id, True)
+        self.bpm.unpin_page(page_id, self.file_id, True)
         print('THE ROOT AFTER FIRST SPLIT:')
         print(f'keys: {root_node.keys}' )
         print(f'pointers: {root_node.pointers}' )
@@ -188,7 +188,7 @@ class BPlusTree:
     def _find_leaf(self, key) -> tuple[BTreePage, list]:
         # fetch the root page
         #print(f'root_page_id: ', self.root_page_id)
-        root_page = BTreePage(self.bpm.fetch_page(self.root_page_id))
+        root_page = BTreePage(self.bpm.fetch_page(self.root_page_id, self.file_id))
         path = [self.root_page_id]
 
         node = root_page
@@ -205,12 +205,12 @@ class BPlusTree:
                     page_id = node.pointers[i + 1]
                     break
 
-            self.bpm.unpin_page(node.page_id)
-            node = BTreePage(self.bpm.fetch_page(page_id))
+            self.bpm.unpin_page(node.page_id, self.file_id)
+            node = BTreePage(self.bpm.fetch_page(page_id, self.file_id))
             path.append(node.page_id)
-        #print('Correct leafnode: ', node.page_id, 'path: ', path)
-        min_key = node.keys[0] if node.keys else -1000
-        max_key = node.keys[-1] if node.keys else 99999999
+        # print('Correct leafnode: ', node.page_id, 'path: ', path)
+        # min_key = node.keys[0] if node.keys else -1000
+        # max_key = node.keys[-1] if node.keys else 99999999
         #print(f'Saerching for key={key}, leaf found: {node.page_id}, num_keys: {node.num_keys}, min_key: {min_key}, max_key: {max_key}')
         #if node.keys:
             #print(node.keys)
@@ -222,7 +222,7 @@ class BPlusTree:
         # search the leaf
         rid = leaf_node.lookup(key)
 
-        self.bpm.unpin_page(leaf_node.page_id)
+        self.bpm.unpin_page(leaf_node.page_id, self.file_id)
         return rid
 
 
@@ -233,13 +233,13 @@ class BPlusTree:
         pass
 
     def _read_metadata(self):
-        raw = self.bpm.fetch_page(0)
+        raw = self.bpm.fetch_page(0, self.file_id)
         self.root_page_id = struct.unpack_from('I', raw, 0)[0]
         self.num_keys = struct.unpack_from('I', raw, 4)[0]
-        self.bpm.unpin_page(0)
+        self.bpm.unpin_page(0, self.file_id)
     
     def _write_metadata(self):
-        raw = self.bpm.fetch_page(0)
+        raw = self.bpm.fetch_page(0, self.file_id)
         struct.pack_into('I', raw, 0, self.root_page_id)
         struct.pack_into('I', raw, 4, self.num_keys)
-        self.bpm.unpin_page(0, True)
+        self.bpm.unpin_page(0, self.file_id, True)

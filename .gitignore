@@ -1,4 +1,5 @@
-tests/*.db
+*.db
+*.json
 tests/test.py
 dcker.txt
 .venv/
