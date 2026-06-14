@@ -6,6 +6,7 @@ class DataType(Enum):
     INT = 'i'       # 4 bytes
     FLOAT = 'd'     # 8 bytes
     BOOL = '?'      # 1 byte
+    BOOLEAN = '?'      # 1 byte
     VARCHAR = 's'   # variable length
 
 
