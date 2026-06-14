@@ -14,6 +14,10 @@ class LogicalPlanner:
 
         if isinstance(ast, exp.Select):
             return self._plan_select(ast)
+        elif isinstance(ast, exp.Drop):
+            return self._plan_drop(ast)
+        elif isinstance(ast, exp.Delete):
+            return self._plan_delete(ast)
         elif isinstance(ast, exp.Create):
             return self._plan_create(ast)
         elif isinstance(ast, exp.Insert):
@@ -21,6 +25,34 @@ class LogicalPlanner:
         else:
             raise(NotImplementedError(f'{sql.split()[0]} has not been implemented'))
     
+    def _plan_drop(self, node: exp.Drop):
+        kind = node.args['kind']
+        assert type(kind) == str
+        if kind == 'TABLE':
+            return self._plan_drop_table(node)
+        
+        raise NotImplementedError(f'DROP {kind} is not supported')
+
+    def _plan_drop_table(self, node: exp.Drop):
+        table_name = node.this.name
+        return LogicalTableDrop(table_name)
+
+
+    def _plan_delete(self, node: exp.Delete):
+        table_name = node.this.name
+
+        # create predicate
+        predicate = self._plan_expression(node.args['where'].this, table_name)
+
+        # logical scan
+        scan = LogicalScan(table_name, None, predicate, True)
+
+        # apply delete on top
+        delete = LogicalDelete(scan, table_name)
+        
+        return delete
+
+
     def _plan_insert(self, node: exp.Insert):
         table_name = node.this.name
         assert type(table_name) == str
@@ -33,7 +65,6 @@ class LogicalPlanner:
             values.append(tuple(temp))
         #print('values: ', values)
         return LogicalInsert(table_name, values)
-
 
 
     def _plan_create(self, node: exp.Create):
@@ -49,6 +80,7 @@ class LogicalPlanner:
 
 
     def _plan_select(self, node: exp.Select) -> LogicalNode:
+        table_from_name = node.args['from_'].this.name
         # build the scan
         plan = self._plan_from(node.args['from_'])
 
@@ -60,13 +92,12 @@ class LogicalPlanner:
         
         # layer where
         if node.args.get('where'):
-            predicate = self._plan_expression(node.args['where'].this)
+            predicate = self._plan_expression(node.args['where'].this, table_from_name)
             plan = LogicalFilter(plan, predicate)
         
         # SKIPPED PROJECTIONS FOR NOW
 
         return plan
-
 
     def _plan_from(self, node) -> LogicalNode:
         table = node.this
@@ -77,64 +108,67 @@ class LogicalPlanner:
     def _plan_projections(self, expressions) -> list[str]:
         return ['*']
 
-    def _plan_expression(self, node) -> Expression:
+    def _plan_expression(self, node, table_name) -> Expression:
 
         if isinstance(node, exp.Column):
             
             col = node.name
             if node.table:
                 return ColumnRef(f"{node.table}.{col}")
-            return ColumnRef(f"{self.from_table}.{col}")
+            return ColumnRef(f"{table_name}.{col}")
     
         elif isinstance(node, exp.Literal):
             value = float(node.this) if node.is_number else node.this
             return Literal(value)
         
+        elif isinstance(node, exp.Boolean):
+            return Literal(node.this)
+
         elif isinstance(node, exp.EQ):
             return Comparison(
-                self._plan_expression(node.left),
+                self._plan_expression(node.left, table_name),
                 ComparisonOp.EQ,
-                self._plan_expression(node.right)
+                self._plan_expression(node.right, table_name)
             )
         
         elif isinstance(node, exp.GT):
             return Comparison(
-                self._plan_expression(node.left),
+                self._plan_expression(node.left, table_name),
                 ComparisonOp.GT,
-                self._plan_expression(node.right)
+                self._plan_expression(node.right, table_name)
             )
 
         elif isinstance(node, exp.GTE):
             return Comparison(
-                self._plan_expression(node.left),
+                self._plan_expression(node.left, table_name),
                 ComparisonOp.GTE,
-                self._plan_expression(node.right)
+                self._plan_expression(node.right, table_name)
             )
         
         elif isinstance(node, exp.LT):
             return Comparison(
-                self._plan_expression(node.left),
+                self._plan_expression(node.left, table_name),
                 ComparisonOp.LT,
-                self._plan_expression(node.right)
+                self._plan_expression(node.right, table_name)
             )
         
         elif isinstance(node, exp.LTE):
             return Comparison(
-                self._plan_expression(node.left),
+                self._plan_expression(node.left, table_name),
                 ComparisonOp.LTE,
-                self._plan_expression(node.right)
+                self._plan_expression(node.right, table_name)
             )
         
         elif isinstance(node, exp.And):
             return And(
-                self._plan_expression(node.left),
-                self._plan_expression(node.right)
+                self._plan_expression(node.left, table_name),
+                self._plan_expression(node.right, table_name)
             )
         
         elif isinstance(node, exp.Or):
             return Or(
-                self._plan_expression(node.left),
-                self._plan_expression(node.right)
+                self._plan_expression(node.left, table_name),
+                self._plan_expression(node.right, table_name)
             )
 
 

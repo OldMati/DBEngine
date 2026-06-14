@@ -11,6 +11,8 @@ class LogicalNode:
 class LogicalScan(LogicalNode):
     table_name: str
     alias: Optional[str] = None
+    predicate: Optional[Expression] = None
+    yield_rid: bool = False
 
     def __repr__(self):
         return f"LogicalScan({self.table_name})"
@@ -49,3 +51,13 @@ class LogicalCreateTable(LogicalNode):
 class LogicalInsert(LogicalNode):
     table_name: str
     values: list[tuple]
+
+@dataclass
+class LogicalTableDrop(LogicalNode):
+    table_name: str
+
+@dataclass
+class LogicalDelete(LogicalNode):
+    child: LogicalNode
+    table_name: str
+    # RIDs: list[tuple[int, int]]

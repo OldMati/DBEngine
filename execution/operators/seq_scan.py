@@ -7,9 +7,10 @@ class SeqScan(Operator):
     table: Table
     predicate: None | Expression
 
-    def open(self, table, predicate=None):
+    def open(self, table, predicate=None, yield_rid=False):
         self.table = table
         self.predicate = predicate
+        self.yield_rid = yield_rid
         self.schema = Schema([
             Column(f'{self.table.table_name}.{col.name}', col.type, col.max_length)
             for col in self.table.schema.columns
@@ -20,7 +21,8 @@ class SeqScan(Operator):
     def next(self):
         for record in self.table.scan():
             if self.predicate is None or self.predicate.evaluate(record.values, self.schema):
-                yield record.values
+                #print('The tuple did pass the predicate, tuple: ', record.values)
+                yield record.rid if self.yield_rid else record.values
 
     def output_schema(self) -> Schema:
         return self.schema

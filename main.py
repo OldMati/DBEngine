@@ -7,7 +7,7 @@ data_dir = 'data/'
 bpm = BufferPoolManager()
 catalog = Catalog(bpm, data_dir)
 catalog.load()
-# CREATE TABLE users (id INT, name VARCHAR)
+
 db = Database(catalog)
 
 while True:
@@ -19,11 +19,12 @@ while True:
     
     start = time.perf_counter()
     results = db.execute(sql)
+    bpm.flush_all()
     end = time.perf_counter()
     if type(results) == str:
         print(results)
     else:
-        for res in results[:8]:
+        for res in results[:15]:
             print(res)
     # except Exception as e:
     #     print(f'Error: ', e)

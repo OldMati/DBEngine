@@ -61,6 +61,7 @@ class Catalog:
             raise KeyError(f'A table named {table_name} does not exist')
         del self.tables[table_name]
         self.flush()
+        return True
     
     def get_table(self, table_name):
         if table_name not in self.tables:

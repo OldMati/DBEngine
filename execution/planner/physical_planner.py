@@ -3,6 +3,7 @@ from execution.planner.logical import *
 from execution.operators.seq_scan import SeqScan
 from execution.operators.filter import Filter
 from execution.operators.hash_join import HashJoin
+from execution.operators.delete import Delete
 from catalog.schema import Schema
 # from execution.operators.projection import Projection
 
@@ -26,6 +27,16 @@ class PhysicalPlanner:
                 count += 1
             return f'Values inserted successfully. Rows affected: {count}'
             
+        elif isinstance(node, LogicalTableDrop):
+            if self.catalog.delete_table(node.table_name):
+                return f'Table {node.table_name} dropped successfully'
+        
+        elif isinstance(node, LogicalDelete):
+            table = self.catalog.tables[node.table_name]
+            child = self.plan(node.child)
+            operator = Delete()
+            operator.open(child, table)
+            return operator
 
         elif isinstance(node, LogicalCreateTable):
             if self.catalog.create_table(node.table_name, Schema(node.columns)):
@@ -35,7 +46,7 @@ class PhysicalPlanner:
         elif isinstance(node, LogicalScan):
             table = self.catalog.tables[node.table_name]
             operator = SeqScan()
-            operator.open(table, predicate)
+            operator.open(table, node.predicate, node.yield_rid)
             return operator
         
         elif isinstance(node, LogicalFilter):

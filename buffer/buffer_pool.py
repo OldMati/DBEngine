@@ -85,6 +85,11 @@ class BufferPoolManager:
         page_id = self.disk_manager.allocate_page(file_id)
         return page_id #page_raw
         
+    def flush_all(self):
+        for frame_id in range(NUM_FRAMES):
+            if self.dirty[frame_id]:
+                self.flush_page(self.frame_table[frame_id])
+
     def close(self):
         for frame_id in range(NUM_FRAMES):
             if self.dirty[frame_id]:

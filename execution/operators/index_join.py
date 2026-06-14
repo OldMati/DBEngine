@@ -23,7 +23,6 @@ class IndexJoin(Operator):
         # for each tuple on the left, find the rid of the tuple on the right 
         # that matches the key, then fetch it and join
 
-        self.left.open()
         self.left_schema = self.left.output_schema()
         self.left_index = self.left.get_index_of_column(self.left_key)
         self.right_index = self.right.get_index(self.right_key)
