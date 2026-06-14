@@ -14,6 +14,8 @@ class SeqScan(Operator):
             Column(f'{self.table.table_name}.{col.name}', col.type, col.max_length)
             for col in self.table.schema.columns
         ])
+        if predicate:
+            predicate.bind(self.schema)
 
     def next(self):
         for record in self.table.scan():
