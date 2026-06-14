@@ -47,12 +47,14 @@ class Catalog:
 
         if table_name in self.tables:
             raise NameError(f'A table named {table_name} already exists')
-        print('CREATING TABLE')
+        #print('CREATING TABLE')
         heap_file = HeapFile(self.bpm, file_id)
         heap_file.create_directory()
         new_table = Table(table_name, heap_file, schema, file_id)
         self.tables[table_name] = new_table
+        #print('tables: ', self.tables)
         self.flush()
+        return True
 
     def delete_table(self, table_name):
         if table_name not in self.tables:

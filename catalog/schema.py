@@ -47,7 +47,7 @@ class Schema:
     def serialize(self, row: Record) -> bytes:
         raw_arr = ['' for _ in range(len(self.columns))]
         header = []
-
+        #print('columns: ', self.columns)
         for column in self.columns:
             col_index = self.column_names[column.name]
             if column.type == DataType.VARCHAR:
@@ -62,6 +62,7 @@ class Schema:
                 raw_length = struct.pack('H', length)   # 2 byte metadata storing the length of the varchar
                 header.append(raw_length)
             else:
+                #print(f'row.values: {row.values}, col_index: {self.column_names[column.name]}')
                 raw_data = struct.pack(column.type.value, row.values[col_index])
                 raw_arr[col_index] = raw_data
 
@@ -127,3 +128,27 @@ class Schema:
         
         return Schema(columns)
         
+    
+    def coerce(self, values: tuple):
+        result = []
+        #print('BEGGINING OF COERCE, VALUES: ', values)
+
+        for value, col in zip(values, self.columns):
+            #print('VALUE IN LOOP: ', value, 'column: ', col.name, 'col_type: ', col.type.name)
+            col_type = col.type.name
+            try:
+                if col_type == 'INT':
+                    result.append(int(value))
+                elif col_type == 'FLOAT':
+                    result.append(float(value))
+                elif col_type == 'VARCHAR':
+                    result.append(str(value))
+                elif col_type == 'BOOL':
+                    if isinstance(value, bool):
+                        result.append(value)
+                    else:
+                        result.append(str(value).lower() in ('1', 'true'))
+            except:
+                raise TypeError(f'Cannot coerce {value} to {col_type} for column {col.name}')
+        #print('RETURNING, result: ', result)
+        return tuple(result)

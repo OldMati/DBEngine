@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 from execution.expressions.base import Expression
+from catalog.schema import Column
 
 @dataclass
 class LogicalNode:
@@ -38,3 +39,13 @@ class LogicalJoin(LogicalNode):
     
     def __repr__(self):
         return f"LogicalJoin({self.condition})\n  ├── {self.left}\n  └── {self.right}"
+
+@dataclass
+class LogicalCreateTable(LogicalNode):
+    table_name: str
+    columns: list[Column]
+
+@dataclass
+class LogicalInsert(LogicalNode):
+    table_name: str
+    values: list[tuple]

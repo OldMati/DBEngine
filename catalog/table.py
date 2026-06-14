@@ -12,7 +12,9 @@ class Table:
         self.schema = schema
         self.file_id = file_id
 
-    def insert(self, row: Record) -> tuple[int, int]:
+    def insert(self, row: Record | tuple) -> tuple[int, int]:
+        if type(row) == tuple:
+            row = Record(row, (0, 0))
         raw = self.schema.serialize(row)
         return self.heap_file.insert_tuple(raw)
 

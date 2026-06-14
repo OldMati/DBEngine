@@ -1,6 +1,7 @@
 from catalog.catalog import Catalog
 from execution.planner.logical_planner import LogicalPlanner
 from execution.planner.physical_planner import PhysicalPlanner
+import time
 
 class Database:
 
@@ -12,11 +13,14 @@ class Database:
     def execute(self, sql: str):
         logical_tree = self.logical_planner.plan(sql)
         physical_tree = self.physical_planner.plan(logical_tree)
-        print(physical_tree.output_schema)
-        result = []
-        print('Reached Database.execute loop')
-        for row in physical_tree.next():
-            print(f'------ appending row: {row} to result')
-            result.append(row)
-        physical_tree.close()
-        return result
+        #print(physical_tree.output_schema)
+        #print('Reached Database.execute loop')
+        if type(physical_tree) == str:
+            return physical_tree
+        else:
+            result = []
+            for row in physical_tree.next():
+                #print(f'------ appending row: {row} to result')
+                result.append(row)
+            physical_tree.close()
+            return result

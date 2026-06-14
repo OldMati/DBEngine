@@ -4,8 +4,8 @@ from catalog.schema import Schema
 class ColumnRef(Expression):
 
     def __init__(self, column_name: str):
-        self.column_name: column_name
         self._index = None
+        self.column_name = column_name
     
     def bind(self, schema):
         self._index = schema.get_index(self.column_name)

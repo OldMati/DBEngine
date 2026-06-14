@@ -5,14 +5,50 @@ from execution.expressions.comparison import Comparison, ComparisonOp
 from execution.expressions.column_ref import ColumnRef
 from execution.expressions.literal import Literal
 from execution.expressions.logical import And, Or
+from catalog.schema import Column, DataType
 
 class LogicalPlanner:
 
     def plan(self, sql:str) -> LogicalNode:
         ast = sqlglot.parse_one(sql)
-        return self._plan_select(ast)
+
+        if isinstance(ast, exp.Select):
+            return self._plan_select(ast)
+        elif isinstance(ast, exp.Create):
+            return self._plan_create(ast)
+        elif isinstance(ast, exp.Insert):
+            return self._plan_insert(ast)
+        else:
+            raise(NotImplementedError(f'{sql.split()[0]} has not been implemented'))
     
-    def _plan_select(self, node: exp.select) -> LogicalNode:
+    def _plan_insert(self, node: exp.Insert):
+        table_name = node.this.name
+        assert type(table_name) == str
+        values = []
+        #print('node.expression: ', node.expression.expressions)
+        for row in node.expression.expressions:
+            temp = []
+            for val in row.expressions:
+                temp.append(str(val.this))
+            values.append(tuple(temp))
+        #print('values: ', values)
+        return LogicalInsert(table_name, values)
+
+
+
+    def _plan_create(self, node: exp.Create):
+        table_name = node.this.this.name
+        column_defs = node.this.expressions
+        columns = []
+        for column in column_defs:
+            data_type = column.args['kind'].this.name
+            #print('data type: ', data_type)
+            columns.append(Column(column.name, DataType[data_type]))
+        
+        return LogicalCreateTable(table_name, columns)
+
+
+    def _plan_select(self, node: exp.Select) -> LogicalNode:
         # build the scan
         plan = self._plan_from(node.args['from_'])
 
@@ -34,6 +70,7 @@ class LogicalPlanner:
 
     def _plan_from(self, node) -> LogicalNode:
         table = node.this
+        self.from_table = table
         alias = table.alias if table.alias else None
         return LogicalScan(table_name=table.name, alias=alias)
     
@@ -43,9 +80,11 @@ class LogicalPlanner:
     def _plan_expression(self, node) -> Expression:
 
         if isinstance(node, exp.Column):
-            table = node.table  # maybe needs .this
+            
             col = node.name
-            return ColumnRef(f"{table}.{col}" if table else col)
+            if node.table:
+                return ColumnRef(f"{node.table}.{col}")
+            return ColumnRef(f"{self.from_table}.{col}")
     
         elif isinstance(node, exp.Literal):
             value = float(node.this) if node.is_number else node.this

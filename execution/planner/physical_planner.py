@@ -3,6 +3,7 @@ from execution.planner.logical import *
 from execution.operators.seq_scan import SeqScan
 from execution.operators.filter import Filter
 from execution.operators.hash_join import HashJoin
+from catalog.schema import Schema
 # from execution.operators.projection import Projection
 
 class PhysicalPlanner:
@@ -12,7 +13,26 @@ class PhysicalPlanner:
         self.catalog = catalog
 
     def plan(self, node: LogicalNode, predicate = None):
-        if isinstance(node, LogicalScan):
+        if isinstance(node, LogicalInsert):
+            table_name = node.table_name
+            table = self.catalog.get_table(table_name)
+            values = node.values
+            count = 0
+            for row in values:
+                #print(f'row before coerce: {row}')
+                row = table.schema.coerce(row)
+                #print(f'row after coerce: {row}')
+                table.insert(row)
+                count += 1
+            return f'Values inserted successfully. Rows affected: {count}'
+            
+
+        elif isinstance(node, LogicalCreateTable):
+            if self.catalog.create_table(node.table_name, Schema(node.columns)):
+                return f'Table {node.table_name} created successfully'
+            return 'Failed to create table'
+
+        elif isinstance(node, LogicalScan):
             table = self.catalog.tables[node.table_name]
             operator = SeqScan()
             operator.open(table, predicate)

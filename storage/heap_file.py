@@ -27,8 +27,8 @@ class HeapFile:
             # no page has enough space, allocate new page
             page_id = self.bpm.allocate_page(self.file_id)
             directory.increase_page_count(page_id)
-            print('ALLOCATE NEW PAGE_ID: ', page_id)
-            print('dir.freespace: ', directory.free_space)
+            #print('ALLOCATE NEW PAGE_ID: ', page_id)
+            #print('dir.freespace: ', directory.free_space)
             new_page = True
 
 
@@ -43,7 +43,7 @@ class HeapFile:
         directory.update_directory(page_id, page.free_space, page.num_slots)
         self.bpm.unpin_page(self.directory_id, self.file_id, True)
 
-        print('inserted tuple into file_id: ', self.file_id)
+        #print('inserted tuple into file_id: ', self.file_id)
         return (page_id, slot_id)
 
     def get_tuple(self, rid: tuple[int, int]) -> bytes:
@@ -72,18 +72,18 @@ class HeapFile:
         directory = DirectoryPage(dir_raw)
         self.bpm.unpin_page(self.directory_id, self.file_id)
         page_count = directory.page_count
-        print('HeapFile scan initialized, page_count: ', page_count, 'file_id: ', self.file_id)
+        #print('HeapFile scan initialized, page_count: ', page_count, 'file_id: ', self.file_id)
 
         # loop over all pages
         for page_id in range(1, page_count):
-            print('looping over page: page_id: ', page_id)
+            #print('looping over page: page_id: ', page_id)
             # read the page
             page_raw = self.bpm.fetch_page(page_id, self.file_id)
             page = Page(page_raw)
             self.bpm.unpin_page(page_id, self.file_id)
             # scan the page
             for slot_id, raw in page.scan():
-                print('---looping over slot_id: ', slot_id)
+                #print('---looping over slot_id: ', slot_id)
                 # yield rid, raw
                 yield (page_id, slot_id), raw
         
