@@ -44,17 +44,17 @@ def test_insert_get_tuple():
 def test_page_count_increase():
     heap_file = set_up_heap_file()
 
-    size = 403
+    size = 400
     row = os.urandom(size)
     heap_file.insert_tuple(row)
 
     page_count = heap_file._get_page_count()
     print('PAGE COUNT: ', page_count)
-    for _ in range(11):
+    for _ in range(400):
         row = os.urandom(size)
         heap_file.insert_tuple(row)
     
-    assert heap_file._get_page_count() == page_count + 1
+    assert heap_file._get_page_count() == page_count + 40
 
 
 

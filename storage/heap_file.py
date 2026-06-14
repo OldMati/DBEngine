@@ -37,13 +37,13 @@ class HeapFile:
         page = Page(page_raw, new_page)
         slot_id = page.insert_tuple(data)
 
-        self.bpm.unpin_page(page_id, True)
+        self.bpm.unpin_page(page_id, self.file_id, True)
 
         # update the directory
         directory.update_directory(page_id, page.free_space, page.num_slots)
-        self.bpm.unpin_page(self.directory_id, True)
+        self.bpm.unpin_page(self.directory_id, self.file_id, True)
 
-        print('dir.freespace: ', directory.free_space)
+        print('inserted tuple into file_id: ', self.file_id)
         return (page_id, slot_id)
 
     def get_tuple(self, rid: tuple[int, int]) -> bytes:
@@ -72,15 +72,18 @@ class HeapFile:
         directory = DirectoryPage(dir_raw)
         self.bpm.unpin_page(self.directory_id, self.file_id)
         page_count = directory.page_count
+        print('HeapFile scan initialized, page_count: ', page_count, 'file_id: ', self.file_id)
 
         # loop over all pages
         for page_id in range(1, page_count):
+            print('looping over page: page_id: ', page_id)
             # read the page
             page_raw = self.bpm.fetch_page(page_id, self.file_id)
             page = Page(page_raw)
             self.bpm.unpin_page(page_id, self.file_id)
             # scan the page
             for slot_id, raw in page.scan():
+                print('---looping over slot_id: ', slot_id)
                 # yield rid, raw
                 yield (page_id, slot_id), raw
         
@@ -100,3 +103,10 @@ class HeapFile:
         directory = DirectoryPage(dir_raw)
         self.bpm.unpin_page(self.directory_id, self.file_id)
         return directory.page_count
+    
+
+    def print_directory(self):
+        dir_raw = self.bpm.fetch_page(self.directory_id, self.file_id)
+        directory = DirectoryPage(dir_raw)
+        self.bpm.unpin_page(self.directory_id, self.file_id)
+        directory.__str__()

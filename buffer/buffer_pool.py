@@ -19,6 +19,7 @@ class BufferPoolManager:
             frame_id = self.page_table[(file_id, page_id)]
             self.pin_count[frame_id] += 1
             self.replacer.record_access(frame_id)
+            self.replacer.set_evictable(frame_id, False)
             return self.frames[frame_id]
 
 
@@ -45,9 +46,6 @@ class BufferPoolManager:
 
         self.replacer.record_access(frame_id)
         self.replacer.set_evictable(frame_id, False)
-
-        # read the page from disc
-        self.disk_manager.read_page(page_id, file_id)
 
         #print(f'Page {page_id} raw: ', self.frames[frame_id][:20])
         return self.frames[frame_id]
