@@ -60,4 +60,7 @@ class LogicalTableDrop(LogicalNode):
 class LogicalDelete(LogicalNode):
     child: LogicalNode
     table_name: str
-    # RIDs: list[tuple[int, int]]
+
+@dataclass
+class LogicalDescribe(LogicalNode):
+    table_name: str

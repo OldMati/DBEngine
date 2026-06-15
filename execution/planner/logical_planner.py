@@ -22,9 +22,15 @@ class LogicalPlanner:
             return self._plan_create(ast)
         elif isinstance(ast, exp.Insert):
             return self._plan_insert(ast)
+        elif isinstance(ast, exp.Describe):
+            return self._plan_describe(ast)
         else:
             raise(NotImplementedError(f'{sql.split()[0]} has not been implemented'))
-    
+
+    def _plan_describe(self, node: exp.Describe):
+        table_name = node.this.name
+        return LogicalDescribe(table_name)
+
     def _plan_drop(self, node: exp.Drop):
         kind = node.args['kind']
         assert type(kind) == str

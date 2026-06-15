@@ -26,7 +26,22 @@ class PhysicalPlanner:
                 table.insert(row)
                 count += 1
             return f'Values inserted successfully. Rows affected: {count}'
-            
+        
+        elif isinstance(node, LogicalDescribe):
+            table = self.catalog.get_table(node.table_name)
+            columns = [(col.name, col.type.name) for col in table.schema.columns]
+            name_width = max([len('Columns')] + [len(col[0]) for col in columns])
+            type_width = max([len('Type')] + [len(col[1]) for col in columns])
+
+            res = [
+                f'{'Columns':<{name_width}}  {'Type':<{type_width}}',
+                f'{'-'*name_width}  {'-'*type_width}',
+            ]
+            for name, typ in columns:
+                res.append(f'{name:<{name_width}}  {typ:<{type_width}}')
+
+            return '\n'.join(res)
+
         elif isinstance(node, LogicalTableDrop):
             if self.catalog.delete_table(node.table_name):
                 return f'Table {node.table_name} dropped successfully'

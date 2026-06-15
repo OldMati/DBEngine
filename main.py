@@ -16,20 +16,19 @@ while True:
     if sql == 'exit': break
 
     if not sql: continue
-    try: 
-        start = time.perf_counter()
-        results = db.execute(sql)
-        bpm.flush_all()
-        end = time.perf_counter()
-        if type(results) == str:
-            print(results)
-        else:
-            for res in results[:15]:
-                print(res)
-        print(f'Executed in {end - start:.6f}s')
+    #try: 
+    start = time.perf_counter()
+    results = db.execute(sql)
+    bpm.flush_all()
+    end = time.perf_counter()
+    if type(results) == str:
+        print(results)
+    else:
+        for res in results[:15]:
+            print(res)
+    print(f'\nExecuted in {end - start:.6f}s\n')
     
-    except Exception as e:
-        print(f'Error: ', e)
-    print()
+    # except Exception as e:
+    #     print(f'Error: ', e)
 
 bpm.close()
