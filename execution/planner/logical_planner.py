@@ -72,8 +72,27 @@ class LogicalPlanner:
         #print('values: ', values)
         return LogicalInsert(table_name, values)
 
-
     def _plan_create(self, node: exp.Create):
+        kind = node.args['kind']
+        # print('Node arg keys')
+        # print([arg for arg in node.args])
+        if kind == 'TABLE':
+            return self._plan_create_table(node)
+        elif kind == 'INDEX':
+            return self._plan_create_index(node)
+        
+        raise NotImplementedError(f'CREATE {kind} is not supported')
+    
+    def _plan_create_index(self, node: exp.Create):
+        idx_name = node.this.name
+        table_name = node.this.args['table'].name
+        
+        column_names = [col.this.name for col in node.this.args['params'].args['columns']]
+
+        return LogicalCreateIndex(idx_name, table_name, column_names)
+ # CREATE INDEX mat_idx on flatmates (id, name)
+
+    def _plan_create_table(self, node: exp.Create):
         table_name = node.this.this.name
         column_defs = node.this.expressions
         columns = []

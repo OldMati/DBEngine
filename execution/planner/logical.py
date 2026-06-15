@@ -64,3 +64,9 @@ class LogicalDelete(LogicalNode):
 @dataclass
 class LogicalDescribe(LogicalNode):
     table_name: str
+
+@dataclass
+class LogicalCreateIndex(LogicalNode):
+    index_name: str
+    table_name: str
+    column_names: list[str]

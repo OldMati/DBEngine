@@ -27,6 +27,14 @@ class PhysicalPlanner:
                 count += 1
             return f'Values inserted successfully. Rows affected: {count}'
         
+        elif isinstance(node, LogicalCreateIndex):
+            columns = node.column_names
+
+            for column in columns:
+                self.catalog.create_index(node.table_name, node.index_name, column)
+
+            return f'Index {node.index_name} created successfully'
+        
         elif isinstance(node, LogicalDescribe):
             table = self.catalog.get_table(node.table_name)
             columns = [(col.name, col.type.name) for col in table.schema.columns]

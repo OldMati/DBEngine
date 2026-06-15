@@ -29,9 +29,9 @@ class BPlusTree:
             assert root_page.page_id == 1
             assert root_page.is_leaf == True
         else:
-            print('file does exist in os, reading metadata')
+            #print('file does exist in os, reading metadata')
             self._read_metadata()
-            print('root_id: ', self.root_page_id)
+            #print('root_id: ', self.root_page_id)
     
 
     def insert(self, key: int, rid: tuple[int, int]):

@@ -5,12 +5,14 @@ class Table:
     table_name: str
     heap_file: HeapFile
     schema: Schema
+    indices: dict # dict mapping column_name to index: {file_id, index_name, tree}
 
-    def __init__(self, table_name: str, heap_file: HeapFile, schema: Schema, file_id: int):
+    def __init__(self, table_name: str, heap_file: HeapFile, schema: Schema, file_id: int, indices: dict | None = None):
         self.table_name = table_name
         self.heap_file = heap_file
         self.schema = schema
         self.file_id = file_id
+        self.indices = indices if indices else {}
 
     def insert(self, row: Record | tuple) -> tuple[int, int]:
         if type(row) == tuple:
