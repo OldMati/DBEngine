@@ -17,9 +17,8 @@ class HashJoin(Operator):
 
         self.hash_table = {}
 
-        self.left.open()
         self.left_schema = self.left.output_schema()
-        left_index = self.left.get_index(self.left_key)
+        left_index = self.left_schema.get_index(self.left_key)
 
         # build the hash_table
         for record in left.next():
@@ -30,9 +29,8 @@ class HashJoin(Operator):
 
         self.left.close()
 
-        self.right.open()
-        self.right_schema = self.seq_scan_right.output_schema()
-        self.right_index = self.right.get_index(self.right_key)
+        self.right_schema = self.right.output_schema()
+        self.right_index = self.right_schema.get_index(self.right_key)
 
 
     def next(self):

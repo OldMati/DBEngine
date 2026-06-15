@@ -133,7 +133,7 @@ class LogicalPlanner:
     def _plan_projections(self, expressions) -> list[str]:
         return ['*']
 
-    def _plan_expression(self, node, table_name) -> Expression:
+    def _plan_expression(self, node, table_name=None) -> Expression:
 
         if isinstance(node, exp.Column):
             
