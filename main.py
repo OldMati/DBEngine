@@ -26,7 +26,9 @@ while True:
     else:
         for res in results[:15]:
             print(res)
-    print(f'\nExecuted in {end - start:.6f}s\n')
+            
+    print(f'\nRows affected: {len(results)}')
+    print(f'Executed in {end - start:.6f}s\n')
     
     # except Exception as e:
     #     print(f'Error: ', e)
