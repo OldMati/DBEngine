@@ -19,6 +19,9 @@ class Catalog:
         self.catalog_filepath = self.filepath
         self.data_dir = data_dir
         self.tables = {}
+        if not os.path.exists(self.catalog_filepath):
+            os.makedirs(self.data_dir, exist_ok=True)   # ensure data/ exists
+            self.flush()  
 
     def flush(self):
         data = {
