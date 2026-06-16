@@ -19,11 +19,12 @@ class Database:
         #print(physical_tree.output_schema)
         #print('Reached Database.execute loop')
         if type(physical_tree) == str:
-            return physical_tree
+            return physical_tree, None
         else:
             result = []
             for row in physical_tree.next():
                 #print(f'------ appending row: {row} to result')
                 result.append(row)
             physical_tree.close()
-            return result
+            schema = physical_tree.output_schema()
+            return result, schema
