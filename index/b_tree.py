@@ -40,9 +40,7 @@ class BPlusTree:
 
         # insert the key into the node
         # find the index of the key in sorted order
-        # if key > 200:
-        #     print(f'Saerching for key={key}, leaf found: {leaf_node.page_id}, num_keys: {leaf_node.num_keys}, min_key: {leaf_node.keys[0]}, max_key: {leaf_node.keys[-1]}')
-            
+  
         leaf_node.insert(key, rid)
         self.num_keys += 1
 
@@ -200,7 +198,7 @@ class BPlusTree:
             # linear search until key >= keys[i]
             page_id = node.pointers[0]
             for i in range(node.num_keys - 1, -1, -1):
-                if key >= node.keys[i]:
+                if key > node.keys[i]:
                     #print('Chosen node key: ', node.keys[i])
                     page_id = node.pointers[i + 1]
                     break
@@ -216,14 +214,22 @@ class BPlusTree:
             #print(node.keys)
         return node, path
 
-    def search(self, key) -> tuple[int, int] | None:
-        # find the correct leaf
+    def search(self, key) -> list[tuple[int, int]]:
+        # find the leftmost correct leaf
         leaf_node, _ = self._find_leaf(key)
-        # search the leaf
-        rid = leaf_node.lookup(key)
+        rids = []
 
-        self.bpm.unpin_page(leaf_node.page_id, self.file_id)
-        return rid
+        while True:
+            # search the leaf
+            rids.extend(leaf_node.lookup(key))
+            passed = bool(leaf_node.keys) and leaf_node.keys[-1] > key
+            next_id = leaf_node.next_leaf
+            self.bpm.unpin_page(leaf_node.page_id, self.file_id)
+            if passed or next_id is None or next_id <= 0:
+                break
+            leaf_node = BTreePage(self.bpm.fetch_page(next_id, self.file_id))
+            
+        return rids
 
 
     def range_scan(self, start_key, end_key) -> list:

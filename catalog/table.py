@@ -18,7 +18,12 @@ class Table:
         if type(row) == tuple:
             row = Record(row, (0, 0))
         raw = self.schema.serialize(row)
-        return self.heap_file.insert_tuple(raw)
+        rid = self.heap_file.insert_tuple(raw)
+
+        for col_name, meta in self.indices.items():
+            col_index = self.get_index(col_name)
+            meta['tree'].insert(row.values[col_index], rid)
+        return rid
 
     def get(self, rid: tuple[int, int]):
         raw = self.heap_file.get_tuple(rid)

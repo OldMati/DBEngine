@@ -14,20 +14,20 @@ def test_insert_and_search():
     tree.insert(4, (2, 1))
     tree.insert(4, (4, 4))
 
-    assert tree.search(1) == (1, 1)
-    assert tree.search(2) == (2, 2)
-    assert tree.search(3) == (3, 3)
-    assert tree.search(4) == (4, 4)
-    assert tree.search(60) == None
+    assert tree.search(1) == [(1, 1)]
+    assert tree.search(2) == [(2, 2)]
+    assert tree.search(3) == [(3, 3)]
+    assert tree.search(4) == [(2, 1), (4, 4)]
+    assert tree.search(60) == []
 
 def test_leaf_splitting():
 
-    for i in range(1024):
+    for i in range(5, 1024):
         tree.insert(i, (i, i))
 
     
-    for i in range(1024):
-        assert tree.search(i) == (i, i)
+    for i in range(5, 1024):
+        assert tree.search(i) == [(i, i)]
 
 def test_leaf_linkage():
     keys = [i for i in range(1024)]

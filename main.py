@@ -23,6 +23,7 @@ while True:
     end = time.perf_counter()
     if type(results) == str:
         print(results)
+        print()
     else:
         for res in results[:15]:
             print(res)

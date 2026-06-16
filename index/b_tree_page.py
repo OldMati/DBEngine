@@ -134,32 +134,35 @@ class BTreePage:
     
     def insert(self, key: int, rid: tuple[int, int]):
         for i in range(self.num_keys):
-            if key <= self.keys[i]:
-                if key == self.keys[i]:
-                    self.RIDs[i] = rid
-                else:
-                    self.keys.insert(i, key)
-                    self.RIDs.insert(i, rid)
-                    self.num_keys += 1
+            if key < self.keys[i]:
+                self.keys.insert(i, key)
+                self.RIDs.insert(i, rid)
+                self.num_keys += 1
                 return
         self.keys.append(key)
         self.RIDs.append(rid)
         self.num_keys += 1
 
-    def lookup(self, key: int) -> tuple[int, int] | None:
+    def lookup(self, key: int) -> list[tuple[int, int]]:
+        rids = []
         for i in range(self.num_keys):
-            if key == self.keys[i]:
-                return self.RIDs[i]
+            if key < self.keys[i]:
+                break
+            elif key == self.keys[i]:
+                rids.append(self.RIDs[i])
+        return rids
     
-        return None
-    
-    def remove_key(self, key:int):
+    def remove_key(self, key:int, rid: tuple[int, int]):
         for i in range(self.num_keys):
-            if key == self.keys[i]:
+            if self.keys[i] > key:
+                break
+            if key == self.keys[i] and rid == self.RIDs[i]:
                 self.keys.pop(i)
                 self.RIDs.pop(i)
-                self.keys -= 1
-                return
+                self.num_keys -= 1
+                return True
+        
+        return False
 
     def insert_pointer(self, min_key: int, pointer: int):
 
