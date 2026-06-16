@@ -232,8 +232,37 @@ class BPlusTree:
         return rids
 
 
-    def range_scan(self, start_key, end_key) -> list:
-        pass
+    def range_scan(self, start_key: int | None, end_key: int | None) -> list:
+        # both inclusive; None means unbounded
+        if start_key is not None:
+            leaf, _ = self._find_leaf(start_key)
+        else:
+            leaf, _ = self._find_leftmost_leaft()
+
+        rids = []
+        # unbounded loop
+            # scan all keys in leaf, if bound broken, return; add them to rids, move to next leaf
+        while True:
+            for i in range(leaf.num_keys):
+                key = leaf.keys[i]
+                if start_key is not None and key < start_key:
+                    continue
+                if end_key is not None and key > end_key:
+                    self.bpm.unpin_page(leaf.page_id, self.file_id)
+                    return rids
+                rids.append(leaf.RIDs[i])
+            
+            next_id = leaf.next_leaf
+            self.bpm.unpin_page(leaf.page_id, self.file_id)
+            if next_id is None or next_id <= 0:
+                break
+            #print('next_id: ', next_id)
+            leaf = BTreePage(self.bpm.fetch_page(next_id, self.file_id))
+        
+        return rids
+
+
+
 
     def delete(self, kay):
         pass
@@ -249,3 +278,15 @@ class BPlusTree:
         struct.pack_into('I', raw, 0, self.root_page_id)
         struct.pack_into('I', raw, 4, self.num_keys)
         self.bpm.unpin_page(0, self.file_id, True)
+    
+    def _find_leftmost_leaft(self):
+        node = BTreePage(self.bpm.fetch_page(self.root_page_id, self.file_id))
+        path = [self.root_page_id]
+
+        while not node.is_leaf:
+            # find the leftmost node, make it current, add to path, unpin previous
+            nxt = node.pointers[0]
+            self.bpm.unpin_page(node.page_id, self.file_id)
+            node = BTreePage(self.bpm.fetch_page(nxt, self.file_id))
+            path.append(node.page_id)
+        return node, path

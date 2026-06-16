@@ -25,7 +25,7 @@ while True:
         print(results)
         print()
     else:
-        for res in results[:15]:
+        for res in results[-15:]:
             print(res)
         print(f'\nRows affected: {len(results)}')
             

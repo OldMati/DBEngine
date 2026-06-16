@@ -75,10 +75,11 @@ class PhysicalPlanner:
         elif isinstance(node, LogicalScan):
             # is there a predicate:
             table = self.catalog.tables[node.table_name]
-            tree_meta, key, residual = self._find_index_lookup(table, node.predicate)
+            match = self._find_index_lookup(table, node.predicate)
 
-            if tree_meta:
-                return self._index_scan(node, table, tree_meta['tree'], key, residual)
+            if match:
+                tree_meta, start, end, residual = match[0], match[1], match[2], match[3]
+                return self._index_scan(node, table, tree_meta['tree'], start, end, residual)
             else:
                 return self._seq_scan(node, table)
             
@@ -126,9 +127,12 @@ class PhysicalPlanner:
         elif isinstance(node, LogicalProjection):
             pass
 
-    def _index_scan(self, node: LogicalScan, table: Table, tree: BPlusTree, key: int, residual: Expression):
+    def _index_scan(self, node: LogicalScan, table: Table, tree: BPlusTree, start: int, end: int, residual: Expression):
         operator = IndexScan()
-        operator.open(table, tree, key, residual, node.yield_rid)
+        if start == end:
+            operator.open(table, tree, mode='eq', key=start, predicate=residual, yield_rid=node.yield_rid)
+        else:
+            operator.open(table, tree, 'range', None, start, end, residual, node.yield_rid)
         return operator
 
     def _seq_scan(self, node: LogicalScan, table: Table):
@@ -138,21 +142,55 @@ class PhysicalPlanner:
 
     def _find_index_lookup(self, table: Table, predicate: Expression | None = None):
         # if not predicate, return none
+        if predicate is None:
+            return None
         # split conjuncts
+        index_col = None
+        start, end = None, None
         conjuncts = self._split_conjuncts(predicate)
-        for i, c in enumerate(conjuncts):
-            if not isinstance(c, Comparison) or c.op != ComparisonOp.EQ:
+        for c in conjuncts:
+            if not isinstance(c, Comparison):
                 continue
+
             col_ref, literal = self._as_col_and_literal(c)
+
             if col_ref is None:
                 continue
+
             col_name = col_ref.column_name.split('.')[-1]
             if col_name not in table.indices:
                 continue
+
+            if index_col is None:
+                index_col = col_name
+            elif col_name != index_col:
+                continue
+
+            if c.op == ComparisonOp.EQ:
+                start = end = literal.value
+            elif c.op == ComparisonOp.GT:
+                start = literal.value + 1 if start is None else max(start, literal.value + 1)
+            elif c.op == ComparisonOp.GTE:
+                start = literal.value if start is None else max(start, literal.value)
+            elif c.op == ComparisonOp.LT:
+                end = literal.value -1 if end is None else min(end, literal.value -1)
+            elif c.op == ComparisonOp.LTE:
+                end = literal.value if end is None else min(end, literal.value)
             
-            residual = self._combine_conjuncts(conjuncts[:i] + conjuncts[i + 1:])
-            return (table.indices[col_name], literal.value, residual)
-        return (None, None, None)
+        if index_col is None:
+            return None
+        
+        residual = self._combine_conjuncts(conjuncts)
+        return (table.indices[index_col], start, end, residual)
+
+    def _op_to_bounds(self, op, value):
+        if op == ComparisonOp.EQ:
+            return (value, value)
+        if op in (ComparisonOp.GT, ComparisonOp.GTE):
+            return (value, None)      # lower-bounded
+        if op in (ComparisonOp.LT, ComparisonOp.LTE):
+            return (None, value)      # upper-bounded
+        return None
 
     def _split_conjuncts(self, predicate) -> list:
         if isinstance(predicate, And):
