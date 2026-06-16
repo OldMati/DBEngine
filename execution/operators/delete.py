@@ -12,14 +12,17 @@ class Delete(Operator):
         self.rids = []
     
     def next(self):
+        pass
+
+    def execute(self):
         self.rids = [rid for rid in self.child.next()]
         for rid in self.rids:
             self.table.delete(rid)
-        yield f'Rows affected: {len(self.rids)}'
+        return f'Rows affected: {len(self.rids)}'
         
     def output_schema(self):
         return Schema()
 
     def close(self):
-        self.child.close
+        self.child.close()
 

@@ -74,6 +74,8 @@ class Schema:
     def deserialize(self, raw: bytes, rid: tuple[int, int]) -> Record:
         # get the number and length of the varchars:
         lengths = []
+        #print('raw: ', raw)
+        #print('rid: ', rid)
         for i in range(self.num_of_varchars):
             length = struct.unpack_from('H', raw, 2 * i)[0]
             lengths.append(length)

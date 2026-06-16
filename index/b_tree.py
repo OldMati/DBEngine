@@ -261,11 +261,21 @@ class BPlusTree:
         
         return rids
 
-
-
-
-    def delete(self, kay):
-        pass
+    def delete(self, key, rid) -> bool:
+        leaf, _ = self._find_leaf(key)
+        while True:
+            if leaf.remove_key(key, rid):
+                leaf.serialize()
+                self.num_keys -= 1
+                self._write_metadata()
+                self.bpm.unpin_page(leaf.page_id, self.file_id, True)
+                return True
+            passed = bool(leaf.keys) and leaf.keys[-1] > key
+            next_id = leaf.next_leaf
+            self.bpm.unpin_page(leaf.page_id, self.file_id)
+            if passed or next_id is None or next_id <= 0:
+                return False
+            leaf = BTreePage(self.bpm.fetch_page(next_id, self.file_id))
 
     def _read_metadata(self):
         raw = self.bpm.fetch_page(0, self.file_id)

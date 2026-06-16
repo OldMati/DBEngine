@@ -27,10 +27,18 @@ class Table:
 
     def get(self, rid: tuple[int, int]):
         raw = self.heap_file.get_tuple(rid)
+        #print('raw: ', raw)
         return self.schema.deserialize(raw, rid)
     
     def delete(self, rid):
-        return self.heap_file.delete_tuple(rid)
+        row = self.get(rid)
+        result = self.heap_file.delete_tuple(rid)
+
+        for col_name, meta in self.indices.items():
+            col_index = self.get_index(col_name)
+            meta['tree'].delete(row.values[col_index], rid)
+
+        return result
 
     def scan(self):
         for rid, raw in self.heap_file.scan():

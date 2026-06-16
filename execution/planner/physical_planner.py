@@ -65,7 +65,9 @@ class PhysicalPlanner:
             child = self.plan(node.child)
             operator = Delete()
             operator.open(child, table)
-            return operator
+            result = operator.execute()
+            operator.close()
+            return result
 
         elif isinstance(node, LogicalCreateTable):
             if self.catalog.create_table(node.table_name, Schema(node.columns)):
@@ -103,7 +105,7 @@ class PhysicalPlanner:
 
             right_col_name = right_key.split('.')[-1]
             if right_table is not None and right_col_name in right_table.indices:
-                print('DOING INDEX JOIN')
+                #print('DOING INDEX JOIN')
                 index_meta = right_table.indices[right_col_name]
                 operator = IndexJoin()
                 operator.open(index_meta['tree'], left, left_key, right_table, right_key)
@@ -111,14 +113,14 @@ class PhysicalPlanner:
 
             left_col_name = right_key.split('.')[-1]
             if left_table is not None and left_col_name in left_table.indices:
-                print('DOING INDEX JOIN')
+                #print('DOING INDEX JOIN')
                 index_meta = left_table.indices[left_col_name]
                 operator = IndexJoin()
                 operator.open(index_meta['tree'], right, right_key, left_table, left_key)
                 return operator
 
             #if cannot index join, do hash join
-            print('DOING HASH JOIN')
+            #print('DOING HASH JOIN')
             operator = HashJoin()
             operator.open(left, left_key, right, right_key)
 
