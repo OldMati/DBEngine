@@ -32,7 +32,7 @@ python main.py
 That drops you into a REPL:
 
 ```
-db> SELECT name, age FROM users WHERE age >= 25
+db> SELECT * FROM users WHERE age >= 25
 --------------------------
 | name       | age       |
 --------------------------
