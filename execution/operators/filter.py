@@ -9,9 +9,7 @@ class Filter(Operator):
         self.child = child
         self.predicate = predicate
         self.schema = self.child.output_schema()
-        #print('SCHEMA: ', self.schema.column_names)
         predicate.bind(self.schema)
-        # child.open()
     
     def next(self):
         for values in self.child.next():

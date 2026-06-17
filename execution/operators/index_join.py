@@ -11,8 +11,6 @@ class IndexJoin(Operator):
     left_key: str
     right_key: str
 
-    # for each tuple 
-
     def open(self, index: BPlusTree, left: Operator, left_key, right: Table, right_key):
         self.index = index
         self.left = left
@@ -20,8 +18,6 @@ class IndexJoin(Operator):
         self.right = right
         self.right_key = right_key
 
-        # for each tuple on the left, find the rid of the tuple on the right 
-        # that matches the key, then fetch it and join
         _temp_scan = SeqScan()
         _temp_scan.open(right)
         self.right_schema = _temp_scan.output_schema()

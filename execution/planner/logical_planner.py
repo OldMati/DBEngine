@@ -63,19 +63,18 @@ class LogicalPlanner:
         table_name = node.this.name
         assert type(table_name) == str
         values = []
-        #print('node.expression: ', node.expression.expressions)
+
         for row in node.expression.expressions:
             temp = []
             for val in row.expressions:
                 temp.append(str(val.this))
             values.append(tuple(temp))
-        #print('values: ', values)
+
         return LogicalInsert(table_name, values)
 
     def _plan_create(self, node: exp.Create):
         kind = node.args['kind']
-        # print('Node arg keys')
-        # print([arg for arg in node.args])
+        
         if kind == 'TABLE':
             return self._plan_create_table(node)
         elif kind == 'INDEX':
@@ -90,7 +89,6 @@ class LogicalPlanner:
         column_names = [col.this.name for col in node.this.args['params'].args['columns']]
 
         return LogicalCreateIndex(idx_name, table_name, column_names)
- # CREATE INDEX mat_idx on flatmates (id, name)
 
     def _plan_create_table(self, node: exp.Create):
         table_name = node.this.this.name
@@ -98,11 +96,10 @@ class LogicalPlanner:
         columns = []
         for column in column_defs:
             data_type = column.args['kind'].this.name
-            #print('data type: ', data_type)
+
             columns.append(Column(column.name, DataType[data_type]))
         
         return LogicalCreateTable(table_name, columns)
-
 
     def _plan_select(self, node: exp.Select) -> LogicalNode:
         table_from_name = node.args['from_'].this.name
@@ -195,6 +192,5 @@ class LogicalPlanner:
                 self._plan_expression(node.left, table_name),
                 self._plan_expression(node.right, table_name)
             )
-
 
         raise NotImplementedError(f"Unsupported expression type: {type(node)}")

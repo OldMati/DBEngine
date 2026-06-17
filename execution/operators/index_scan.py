@@ -36,9 +36,10 @@ class IndexScan(Operator):
     def next(self):
         if self.mode == 'eq':
             rids = self.tree.search(self.key)
-        # range
         else:
+            # range scan
             rids = self.tree.range_scan(self.start_key, self.end_key)
+
         for rid in rids:
             record = self.table.get(rid)
             if self.predicate is None or self.predicate.evaluate(record.values, self.schema):

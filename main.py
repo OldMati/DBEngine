@@ -15,7 +15,7 @@ while True:
     sql = input('db> ')
     
     if sql == 'exit': break
-
+    
     if not sql: continue
     try: 
         start = time.perf_counter()

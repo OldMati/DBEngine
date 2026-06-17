@@ -14,9 +14,8 @@ class Catalog:
 
     def __init__(self, bpm: BufferPoolManager, data_dir: str):
         self.next_file_id = 0
-        self.filepath = data_dir + 'catalog.json'
         self.bpm = bpm
-        self.catalog_filepath = self.filepath
+        self.catalog_filepath = data_dir + 'catalog.json'
         self.data_dir = data_dir
         self.tables = {}
         if not os.path.exists(self.catalog_filepath):
@@ -51,7 +50,7 @@ class Catalog:
             schema = Schema.from_dict(meta['schema'])
             file_id = meta['file_id']
             indices = meta['indices']
-            #print('FETCHING INDICES, INDICES: ', indices)
+
             for index in indices.values():
                 index['tree'] = BPlusTree(self.bpm, index['file_id'])
             heap_file = HeapFile(self.bpm, file_id)
@@ -62,8 +61,8 @@ class Catalog:
         file_id = self.next_file_id
         self.next_file_id += 1
         table = self.get_table(table_name)
-        #print('table indices: ', table.indices)
-        #print('column name: ', column_name)
+
+
         if column_name in table.indices:
             raise KeyError(f'An index in {table_name} on {column_name} already exists')
         
@@ -86,12 +85,12 @@ class Catalog:
 
         if table_name in self.tables:
             raise NameError(f'A table named {table_name} already exists')
-        #print('CREATING TABLE')
+
         heap_file = HeapFile(self.bpm, file_id)
         heap_file.create_directory()
         new_table = Table(table_name, heap_file, schema, file_id)
         self.tables[table_name] = new_table
-        #print('tables: ', self.tables)
+
         self.flush() 
         return True
 

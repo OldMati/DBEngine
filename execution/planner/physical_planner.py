@@ -13,7 +13,6 @@ from execution.operators.delete import Delete
 from catalog.schema import Schema
 from catalog.table import Table
 from index.b_tree import BPlusTree
-# from execution.operators.projection import Projection
 
 class PhysicalPlanner:
     catalog: Catalog
@@ -21,7 +20,7 @@ class PhysicalPlanner:
     def __init__(self, catalog: Catalog):
         self.catalog = catalog
 
-    def plan(self, node: LogicalNode, predicate = None):
+    def plan(self, node: LogicalNode):
         if isinstance(node, LogicalInsert):
             table_name = node.table_name
             table = self.catalog.get_table(table_name)
@@ -96,7 +95,6 @@ class PhysicalPlanner:
             left = self.plan(node.left)
             right = self.plan(node.right)
 
-            # need to check the logic for getting the column names for keys
             left_key = node.condition.left.column_name
             right_key = node.condition.right.column_name
             
@@ -105,7 +103,6 @@ class PhysicalPlanner:
 
             right_col_name = right_key.split('.')[-1]
             if right_table is not None and right_col_name in right_table.indices:
-                #print('DOING INDEX JOIN')
                 index_meta = right_table.indices[right_col_name]
                 operator = IndexJoin()
                 operator.open(index_meta['tree'], left, left_key, right_table, right_key)
@@ -113,14 +110,12 @@ class PhysicalPlanner:
 
             left_col_name = right_key.split('.')[-1]
             if left_table is not None and left_col_name in left_table.indices:
-                #print('DOING INDEX JOIN')
                 index_meta = left_table.indices[left_col_name]
                 operator = IndexJoin()
                 operator.open(index_meta['tree'], right, right_key, left_table, left_key)
                 return operator
 
-            #if cannot index join, do hash join
-            #print('DOING HASH JOIN')
+            # if cannot index join, do hash join
             operator = HashJoin()
             operator.open(left, left_key, right, right_key)
 

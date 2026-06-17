@@ -48,11 +48,10 @@ class Schema:
     def serialize(self, row: Record) -> bytes:
         raw_arr = ['' for _ in range(len(self.columns))]
         header = []
-        #print('columns: ', self.columns)
+
         for column in self.columns:
             col_index = self.column_names[column.name]
             if column.type == DataType.VARCHAR:
-                #print('SERIALIZING THE VARCHAR NOW, length of column: ', len(row.values[col_index]), 'max length: ', column.max_length, ' column: ', row.values[col_index])
                 if column.max_length and len(row.values[col_index]) > column.max_length:
                     return False
                 
@@ -62,8 +61,8 @@ class Schema:
                 length = len(raw_data)
                 raw_length = struct.pack('H', length)   # 2 byte metadata storing the length of the varchar
                 header.append(raw_length)
+
             else:
-                #print(f'row.values: {row.values}, col_index: {self.column_names[column.name]}')
                 raw_data = struct.pack(column.type.value, row.values[col_index])
                 raw_arr[col_index] = raw_data
 
@@ -74,8 +73,7 @@ class Schema:
     def deserialize(self, raw: bytes, rid: tuple[int, int]) -> Record:
         # get the number and length of the varchars:
         lengths = []
-        #print('raw: ', raw)
-        #print('rid: ', rid)
+        
         for i in range(self.num_of_varchars):
             length = struct.unpack_from('H', raw, 2 * i)[0]
             lengths.append(length)
@@ -134,10 +132,8 @@ class Schema:
     
     def coerce(self, values: tuple):
         result = []
-        #print('BEGGINING OF COERCE, VALUES: ', values)
 
         for value, col in zip(values, self.columns):
-            #print('VALUE IN LOOP: ', value, 'column: ', col.name, 'col_type: ', col.type.name)
             col_type = col.type.name
             try:
                 if col_type == 'INT':
@@ -153,5 +149,5 @@ class Schema:
                         result.append(str(value).lower() in ('1', 'true'))
             except:
                 raise TypeError(f'Cannot coerce {value} to {col_type} for column {col.name}')
-        #print('RETURNING, result: ', result)
+
         return tuple(result)

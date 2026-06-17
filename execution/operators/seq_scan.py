@@ -21,7 +21,6 @@ class SeqScan(Operator):
     def next(self):
         for record in self.table.scan():
             if self.predicate is None or self.predicate.evaluate(record.values, self.schema):
-                #print('The tuple did pass the predicate, tuple: ', record.values)
                 yield record.rid if self.yield_rid else record.values
 
     def output_schema(self) -> Schema:

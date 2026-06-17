@@ -49,11 +49,7 @@ class BTreePage:
         n = self.num_keys
 
         if self.is_leaf:
-            # if self.prev_leaf == None:
-            #     self.prev_leaf = -1
-            # if self.next_leaf == None:
-            #     self.next_leaf = -1
-
+            
             # write pointers
             struct.pack_into('i', raw, offset, self.prev_leaf)
             struct.pack_into('i', raw, offset + 4, self.next_leaf)
@@ -95,12 +91,8 @@ class BTreePage:
             self.RIDs = []
 
             self.prev_leaf = struct.unpack_from('i', raw, offset)[0]
-            # if self.prev_leaf == -1:
-            #     self.prev_leaf = None
-
+            
             self.next_leaf = struct.unpack_from('i', raw, offset + 4)[0]
-            # if self.next_leaf == -1:
-            #     self.next_leaf = None
             
             offset += 8
             
@@ -117,7 +109,6 @@ class BTreePage:
                 offset += 8
             
         else:
-            #print('not self.leaf')
             # read the pointers (page_ids)
             self.pointers = []
             for _ in range(n + 1):

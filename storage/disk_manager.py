@@ -6,7 +6,6 @@ class DiskManager:
 
     def __init__(self):
         pass
-        # read the directory and add the page # etc
 
     def write_page(self, page_id: int, file_id: int, data:bytes):
         file, num_pages = self.open(file_id)

@@ -47,11 +47,9 @@ class BufferPoolManager:
         self.replacer.record_access(frame_id)
         self.replacer.set_evictable(frame_id, False)
 
-        #print(f'Page {page_id} raw: ', self.frames[frame_id][:20])
         return self.frames[frame_id]
     
     def unpin_page(self, page_id: int, file_id: int, is_dirty: bool = False):
-        #print('Buffer pool: removing ', page_id, 'from the table')
         if (file_id, page_id) not in self.page_table:
             return False
 
@@ -66,24 +64,21 @@ class BufferPoolManager:
             self.dirty[frame_id] = True
         
         if self.pin_count[frame_id] == 0:
-            # print("PAGE IS EVICTABLE!")
             self.replacer.set_evictable(frame_id, True)
 
     def flush_page(self, rid: tuple[int, int]):
-        #print('FLUSHING PAGE_id: ', page_id)
         if rid not in self.page_table:
             return False
         
         frame_id = self.page_table[rid]
 
         (file_id, page_id) = rid
-        #print('sending page to disk manager to write')
         self.disk_manager.write_page(page_id, file_id, self.frames[frame_id])
         self.dirty[frame_id] = False
 
     def allocate_page(self, file_id: int) -> int:
         page_id = self.disk_manager.allocate_page(file_id)
-        return page_id #page_raw
+        return page_id
         
     def flush_all(self):
         for frame_id in range(NUM_FRAMES):

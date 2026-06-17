@@ -11,3 +11,4 @@ __pycache__/
 dbengine.egg-info/
 pyproject.toml
 TODO.txt
+.DS_Store 

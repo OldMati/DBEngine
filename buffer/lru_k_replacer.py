@@ -11,7 +11,6 @@ class LRUKReplacer:
         self.current_time = 0
 
     def record_access(self, frame_id: int):
-        #print(self.history)
         self.history[frame_id].append(self.current_time)
         self.current_time += 1
     

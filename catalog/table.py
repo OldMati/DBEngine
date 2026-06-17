@@ -27,7 +27,6 @@ class Table:
 
     def get(self, rid: tuple[int, int]):
         raw = self.heap_file.get_tuple(rid)
-        #print('raw: ', raw)
         return self.schema.deserialize(raw, rid)
     
     def delete(self, rid):

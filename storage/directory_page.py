@@ -22,18 +22,15 @@ class DirectoryPage:
 
     def deserialize(self):
         self.page_count = struct.unpack_from('H', self.dir_raw, 0)[0]
-        #print(f'DIRECTORYPAGE - deserializing, page_count: ', self.page_count)
         offset = 2
         
         for _ in range(1, self.page_count):
             page_id = struct.unpack_from('H', self.dir_raw, offset)[0]
             self.free_space[page_id] = struct.unpack_from('H', self.dir_raw, offset + 2)[0]
-            #print(f'DIRECTORYPAGE - deserializing, current page_id: {page_id}, free_space: {self.free_space[page_id]}')
             offset += 6
             
     def update_directory(self, page_id, free_space, tuple_count) -> bool | None:
-        # print(f'page_id: {page_id}, page_count: {self.page_count}')
-        # print(f'page_count from raw: ', struct.unpack_from('H', self.dir_raw, 0)[0])
+        
         if page_id == 0 or page_id >= self.page_count or free_space < 0 or tuple_count < 0:
             return False
 
