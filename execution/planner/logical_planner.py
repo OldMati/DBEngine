@@ -116,8 +116,10 @@ class LogicalPlanner:
         if node.args.get('where'):
             predicate = self._plan_expression(node.args['where'].this, table_from_name)
             plan = LogicalFilter(plan, predicate)
-        
-        # SKIPPED PROJECTIONS FOR NOW
+
+        projections = self._plan_projections(node.expressions, table_from_name)
+        if projections is not None:
+            plan = LogicalProjection(plan, projections)
 
         return plan
 
@@ -127,8 +129,17 @@ class LogicalPlanner:
         alias = table.alias if table.alias else None
         return LogicalScan(table_name=table.name, alias=alias)
     
-    def _plan_projections(self, expressions) -> list[str]:
-        return ['*']
+    def _plan_projections(self, expressions, table_name=None):
+        if any(isinstance(e, exp.Star) for e in expressions):
+            return None
+
+        projections = []
+        for e in expressions:
+            if isinstance(e, exp.Alias):
+                projections.append((self._plan_expression(e.this, table_name), e.alias))
+            else:
+                projections.append((self._plan_expression(e, table_name), e.name))
+        return projections
 
     def _plan_expression(self, node, table_name=None) -> Expression:
 

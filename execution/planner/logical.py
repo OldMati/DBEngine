@@ -28,10 +28,10 @@ class LogicalFilter(LogicalNode):
 @dataclass
 class LogicalProjection(LogicalNode):
     child: LogicalNode
-    columns: list[str]
+    projections: list[str]
 
     def __repr__(self):
-        return f"LogicalProjection({self.columns})\n  └── {self.child}"
+        return f"LogicalProjection({self.projections})\n  └── {self.child}"
 
 @dataclass
 class LogicalJoin(LogicalNode):
